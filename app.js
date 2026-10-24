@@ -280,6 +280,7 @@ function renderWeek(){
     const bench = !stIds.has(x.id);
     if (bench) return insIds.has(x.id) ? ["in", "להכניס הלילה"] : x.left.length ? ["off", "ספסל"] : ["off", "סיים את השבוע"];
     if (x.locked) return ["done", `${xi("lock", 12)}נעול`];
+    if (x.pending) return ["lock", "נעלתי?"];     // Sleeper counts an earlier game of his and nothing here confirms it yet
     if (outIds.has(x.id)) return ["out", "לספסל הלילה"];
     return {lock: ["lock", "לנעול"], wait: ["wait", "לחכות"], ahead: ["wait", "עוד לא שיחק"], final: ["off", "סיים את השבוע"], nogames: ["out", "אין משחקים"], out: ["out", "פצוע"]}[x.act] || ["off", ""];
   };
@@ -288,7 +289,7 @@ function renderWeek(){
     if (!g) return `<td class="${td}"></td>`;
     const opp = `${g.home ? "" : "@"}${g.opp}`;
     if (g.done && g.fp != null) {
-      const cls = x.lockedOn === d ? "k" : countedOn(x) === d && !x.locked ? (stIds.has(x.id) ? "av" : "bn") : "";
+      const cls = x.lockedOn === d ? "k" : x.pending && x.pending.date === d ? "pk" : countedOn(x) === d && !x.locked ? (stIds.has(x.id) ? "av" : "bn") : "";
       return `<td class="${td}"><span class="sc ${cls}" title="${esc(opp)}">${f1(g.fp)}</span></td>`;
     }
     if (g.done) return `<td class="${td}"><span class="dim" style="font-size:11px">לא שיחק</span></td>`;
@@ -302,7 +303,7 @@ function renderWeek(){
     const bul = x.locked ? `<div class="bul"><i class="ok" style="width:${Math.min((x.pts || 0) / scale, 1) * 100}%"></i></div>`
       : pts != null && bar ? `<div class="bul"><i class="${pts >= bar ? "ok" : ""}" style="width:${Math.min(pts / scale, 1) * 100}%"></i><u style="right:${Math.min(bar / scale, 1) * 100}%"></u></div>` : "";
     const flag = x.inj ? `<span class="q">${esc(injTxt(x.inj))}</span>` : "";
-    const btn = cls === "lock" || cls === "done" ? `<button class="act ${cls}" onclick="toggleLock('${x.id}')" title="${cls === "lock" ? "לחיצה מסמנת שנעלת ב-Sleeper" : "לחיצה מבטלת את הסימון"}">${txt}</button>` : `<span class="act ${cls}">${txt}</span>`;
+    const btn = cls === "lock" || cls === "done" ? `<button class="act ${cls}" onclick="toggleLock('${x.id}')" title="${x.pending ? `Sleeper מראה ${f1(x.pending.fp)} מהמשחק ב-${dLbl(x.pending.date)}. אם נעלת אותו, לחיצה מאשרת` : cls === "lock" ? "לחיצה מסמנת שנעלת ב-Sleeper" : "לחיצה מבטלת את הסימון"}">${txt}</button>` : `<span class="act ${cls}">${txt}</span>`;
     return `<tr><td><div class="pl"><span class="sl${slot === "BN" || slot === "IR" ? " BN" : ""}">${slot}</span>${hsI(x.id, 26)}<b>${pName(x)}</b>${tlI(x.team)}${flag}</div></td>
       ${dates.map(d => cell(x, d)).join("")}<td class="num pj">${f1(x.m)}</td><td class="num b">${nn(pts)}</td><td class="num pj">${nn(x.locked ? null : bar)}</td><td>${bul}</td><td>${btn}</td></tr>`;
   };
@@ -487,22 +488,27 @@ function renderLive(){
 
   // ---- the open matchup, slot by slot: the right team's player, the slot, the left team's player ----
   const opened = ordered.find(([a]) => a.matchup_id === LIVE.muSel);
+  // another team's player: there is no way to know what he locked (Sleeper shows the counted score, not the lock), so a
+  // number is solid only for a player who is locked or done; otherwise it is what counts now, muted (Nati, 25.10.2026)
+  const solid = x => x.locked || (!x.left.length && !x.g.some(g => g.live));
+  const nCls = x => solid(x) ? "" : " pv";
+  const pend = x => x.pending ? `<span class="left pk" title="Sleeper מראה את המשחק מ-${dLbl(x.pending.date)}. אין אישור שזו נעילה, ולכן נספר המשחק האחרון">Sleeper: ${f1(x.pending.fp)}?</span>` : "";
   if (opened) {
     const [a, b] = opened, ta = TW[a.roster_id], tb = TW[b.roster_id], ua = Mo.byRid[a.roster_id].uid, ub = Mo.byRid[b.roster_id].uid;
     const state = x => x.locked ? `<span class="act done">${xi("lock", 12)}נעול</span>`
       : x.g.some(g => g.live) ? `<span class="chip live"><i></i>משחק עכשיו</span>`
-      : `<span class="left">${x.left.length ? (x.left.length === 1 ? "משחק אחד נשאר" : `${x.left.length} משחקים נשארו`) : x.g.length ? "סיים" : "אין משחקים"}</span>`;
+      : `<span class="left">${x.left.length ? (x.left.length === 1 ? "משחק אחד נשאר" : `${x.left.length} משחקים נשארו`) : x.g.length ? "סיים" : "אין משחקים"}</span>${pend(x)}`;
     const who = x => `<div class="pl">${hsI(x.id, 26)}<div><b>${pName(x)}</b><small>${esc(x.team)}${x.inj ? ` · ${esc(injTxt(x.inj))}` : ""}</small></div></div>`;
     const empty = `<td colspan="3" class="dim" style="text-align:center">משבצת ריקה</td>`;
     const rowsH = ta && tb ? SLOTS.map((sl, i) => { const x = ta.st[i], y = tb.st[i];
-      return `<tr>${x ? `<td style="text-align:right">${who(x)}</td><td class="num b">${nn(x.pts)}</td><td>${state(x)}</td>` : empty}
+      return `<tr>${x ? `<td style="text-align:right">${who(x)}</td><td class="num b${nCls(x)}">${nn(x.pts)}</td><td>${state(x)}</td>` : empty}
         <td class="slc"><span class="sl">${sl}</span></td>
-        ${y ? `<td>${state(y)}</td><td class="num b">${nn(y.pts)}</td><td class="lf">${who(y)}</td>` : empty}</tr>`; }).join("")
+        ${y ? `<td>${state(y)}</td><td class="num b${nCls(y)}">${nn(y.pts)}</td><td class="lf">${who(y)}</td>` : empty}</tr>`; }).join("")
       + `<tr class="sec"><td colspan="3">ספסל · ${ta.bench.map(x => esc(lastName(x.p.n))).join(", ") || "ריק"}</td><td></td><td colspan="3" style="text-align:left">ספסל · ${tb.bench.map(x => esc(lastName(x.p.n))).join(", ") || "ריק"}</td></tr>` : "";
     const head = (m, T, uid) => `<div class="mh" style="--c:${col(uid)}">${av(uid, 36)}<div><b>${nm(uid)}</b><small>מקום ${rankOfRid(m.roster_id)}${T ? ` · נעול ${f1(T.cur)} · צפי ${f1(T.exp)}` : ""}</small></div><span class="n">${f1(m.points || 0)}</span></div>`;
     html.push(`<section class="blk s12 paper mud" aria-label="${nm(ua)} מול ${nm(ub)}, שחקן מול שחקן"><div class="bh"><h2>${nm(ua)} מול ${nm(ub)}</h2><span class="meta">שבוע ${wk} · שחקן מול שחקן, ונספר = מה ש-Sleeper סופר עכשיו</span><span class="sp"></span><button class="btn" onclick="muPick(${a.matchup_id})">סגירה</button></div>
       <div class="mhs">${head(a, ta, ua)}<span class="vs">מול</span>${head(b, tb, ub)}</div>
-      ${rowsH ? `<div class="tsc"><table class="tb h2h"><tbody>${rowsH}</tbody></table></div>` : `<p class="mut">טוען את השבוע מ-Sleeper</p>`}</section>`);
+      ${rowsH ? `<div class="tsc"><table class="tb h2h"><tbody>${rowsH}</tbody></table></div><div class="note">מספר מעומעם = מה שנספר עכשיו, והוא יכול להשתנות במשחק הבא. אי אפשר לדעת מה שחקן של מישהו אחר נעל, אז רק "נעול" ו"סיים" סופיים.</div>` : `<p class="mut">טוען את השבוע מ-Sleeper</p>`}</section>`);
   }
 
   // ---- the standings ----
@@ -523,7 +529,7 @@ function renderLive(){
   const opPair = ms.find(m => m.roster_id === selRid), opM = opPair && ms.find(m => m.matchup_id === opPair.matchup_id && m.roster_id !== selRid);
   const opT = opM && TW[opM.roster_id], vs = opM ? `מול ${esc(Mo.byRid[opM.roster_id].name)}${ST && opT ? `, ${Math.round(winP(ST, opT) * 100)}%` : ""}` : "";
   const roRows = ST ? ST.st.map((x, i) => x ? `<tr><td style="text-align:right"><div class="pl"><span class="sl">${SLOTS[i]}</span>${hsI(x.id, 24)}<b>${pName(x)}</b>${tlI(x.team)}</div></td>
-      <td class="num b" style="width:56px">${nn(x.pts)}</td><td style="width:104px">${x.locked ? `<span class="act done">${xi("lock", 12)}נעול</span>` : `<span class="left">${x.left.length ? (x.left.length === 1 ? "משחק אחד נשאר" : `${x.left.length} משחקים נשארו`) : x.g.length ? "סיים" : "אין משחקים"}</span>`}</td></tr>` : "").join("")
+      <td class="num b${nCls(x)}" style="width:56px">${nn(x.pts)}</td><td style="width:104px">${x.locked ? `<span class="act done">${xi("lock", 12)}נעול</span>` : `<span class="left">${x.left.length ? (x.left.length === 1 ? "משחק אחד נשאר" : `${x.left.length} משחקים נשארו`) : x.g.length ? "סיים" : "אין משחקים"}</span>${pend(x)}`}</td></tr>` : "").join("")
     + `<tr class="sec"><td colspan="3">ספסל · ${ST.bench.length} · ${ST.bench.map(x => esc(lastName(x.p.n))).join(", ")}</td></tr>`
     : sel.players.slice(0, 14).map(p => `<tr><td style="text-align:right"><div class="pl">${hsI(p.id, 24)}<b>${nameLink(p)}</b>${tlI(p.t)}</div></td><td class="num pj">${f1(adj(p))}</td><td></td></tr>`).join("");
   html.push(`<section class="blk s4 paper" aria-label="הסגלים"><div class="bh"><h2>הסגלים</h2></div>

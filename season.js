@@ -446,7 +446,7 @@ function pState(id, Wm, mp, week){
   if (uncertain) pts = lastFp;
   // a counted score that matches an earlier game (not the latest) is a lock, once the ledger agrees (CONFIRM_READS)
   // or "נעלתי" was pressed for that game. Read from the ledger even during his game: it holds the reads from before.
-  let locked = false, lockedOn = null, pending = false;
+  let locked = false, lockedOn = null, pending = null;     // pending: {date, fp} = Sleeper counts that earlier game, not confirmed yet
   const mark0 = (S.locks && S.locks[week] && S.locks[week][id]) || null;
   if (pts != null && played.length >= 2 && Math.abs(pts - lastFp) > 0.05) {
     const hit = played.slice(0, -1).find(x => Math.abs(x.fp - pts) < 0.05);
@@ -454,7 +454,7 @@ function pState(id, Wm, mp, week){
     const ok = ASOF || (hit && mark0 === hit.date) || (rec && rec.date === lastDate && rec.vals.length === 1 && Math.abs(rec.vals[0] - pts) < 0.05
       && (rec.n || 0) >= CONFIRM_READS && Date.now() - rec.since >= CONFIRM_MS);
     if (hit && ok) { locked = true; lockedOn = hit.date; }
-    else if (hit) { pending = true; pts = lastFp; }
+    else if (hit) { pending = {date: hit.date, fp: pts}; pts = lastFp; }
   }
   // "נעלתי" (here or on the phone): S.locks[week][player] = the date of the game you locked (true: marked before
   // 24.10.2026, any game). A press for his latest game counts at once: Sleeper's API shows that lock only after his
@@ -629,13 +629,16 @@ function ackInjuries(ids){
   refreshAlerts(); rerenderSeason();
 }
 // "נעלתי" here marks the lock on his latest game and tells the phone (sendLock), so the reminders stop there too.
-// Pressed again it takes the mark back, here only. A lock Sleeper already shows (an earlier game) has nothing to mark.
+// Pressed again it takes the mark back, here only. A lock Sleeper already shows (an earlier game) has nothing to mark,
+// unless it is still unconfirmed (pending: Sleeper counts an earlier game, e.g. Edwards 40.5 from 21.10 while his latest
+// is 21.5): the press confirms it on that game at once (25.10.2026, Nati locked him after game 1 and had no button).
 function toggleLock(id){
   const X = seasonState(), w = X && X.myR && X.D.week; if (!w) return;
   const x = [...X.me.st.filter(Boolean), ...X.me.bench, ...X.me.ir].find(y => y.id === id);
   S.locks = S.locks || {}; S.locks[w] = S.locks[w] || {};
   if (x && x.locked && !S.locks[w][id]) { toast(`${x.p.n} נעול לפי Sleeper${x.lockedOn ? ` על המשחק מ-${fmtShort(dObj(x.lockedOn))}` : ""}`); return; }
   if (S.locks[w][id] && (!x || x.locked)) delete S.locks[w][id];
+  else if (x && x.pending) { S.locks[w][id] = x.pending.date; sendLock(`lock|${w}|${id}|${x.pending.date}`, x.p.n); }
   else if (x && x.lastDate) { S.locks[w][id] = x.lastDate; sendLock(`lock|${w}|${id}|${x.lastDate}`, x.p.n); }
   else S.locks[w][id] = true;            // no game yet: a mark by hand, as before 24.10.2026
   save(); refreshAlerts(); rerenderSeason();

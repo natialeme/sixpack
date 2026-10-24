@@ -730,3 +730,16 @@ body.app2 #alertsPop{width:min(540px,calc(100vw - 100px));max-height:calc(100vh 
   #alertsPop .bh{flex-wrap:nowrap}
   #alertsPop .bh .meta{display:none}
 }
+
+/* a lock Sleeper seems to show but nothing confirms (25.10.2026): the game's number gets a dashed frame, the row a button */
+.sx .sc.pk{color:var(--tx);outline:1.5px dashed var(--me);outline-offset:-1.5px}
+/* another team's number that can still change: muted until he is locked or done */
+.sx .tb .num.b.pv{color:var(--tx3);font-weight:600}
+.sx .left.pk{display:block;margin-top:2px;color:var(--me-tx);font-weight:700;cursor:help;text-decoration:underline dotted;text-underline-offset:3px}
+
+/* the settings cover the whole screen, the content in a centred column (Nati, 25.10.2026) */
+body.app2 #settings{--sp:max(18px,calc((100vw - 640px) / 2));inset:0;width:100vw;max-width:none;height:100vh;height:100dvh;max-height:none;margin:0;border:0;border-radius:0;box-shadow:none}
+#settings .dh,#settings .sec,#settings .df{padding-inline:var(--sp)}
+#settings .dh{min-height:60px}
+#settings .dh h3{font-size:18px}
+#settings .sec{padding-block:20px}
