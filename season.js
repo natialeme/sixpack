@@ -86,10 +86,14 @@ async function fetchSeason(force){
   renderHeader();
   try {
     const lid = LIVE_LEAGUE;
+    // the big player file and ESPN's injuries start with the first requests, not after the others, and the screens draw
+    // as soon as Sleeper's part is in: ESPN's tip-offs and the extra matchup reads follow (25.10.2026: 6.6 s to 1.5 s)
+    const pPlayers = loadPlayers(force), pInj = loadEspnInjuries(force);
     const [state, lg, users, rosters] = await Promise.all([getJSON(`${API}/state/nba`), getJSON(`${API}/league/${lid}`),
       getJSON(`${API}/league/${lid}/users`), getJSON(`${API}/league/${lid}/rosters`)]);
     const season = lg.season;
     const week = WEEK_Q || (state.league_season === season ? (state.display_week || state.week || 1) : (lg.settings.last_scored_leg || 1));
+    const pSched = loadSchedule(season);
     const [matchups, proj, stats, trend, tx0, tx1, nextProj] = await Promise.all([
       getJSON(`${API}/league/${lid}/matchups/${week}`).catch(() => []),
       getJSON(`${SAPI}/projections/nba/${season}/${week}?season_type=regular`).catch(() => []),
@@ -100,23 +104,30 @@ async function fetchSeason(force){
       getJSON(`${SAPI}/projections/nba/${season}/${week + 1}?season_type=regular`).catch(() => []),
     ]);
     const reads = readMatchups(lid, week, matchups);     // the other reads of the matchups, while the rest loads
-    await loadSchedule(season);
-    await loadPlayers(force);
+    await Promise.all([pSched, pPlayers]);
     SEA.d = {state, lg, users, rosters, week, season, matchups, proj, stats, trend, tx: [...tx0, ...tx1], nextProj};
     SEA.at = Date.now(); SEA.err = null; HIST.memo = null;
     // the past weeks before the alerts: every bar's m counts his games from them (blendM)
-    await Promise.all([loadTips(SEA.d), loadEspnInjuries(force), loadHistory(SEA.d)]);
-    noteReads(SEA.d, await reads);
+    await loadHistory(SEA.d);
+    refreshAlerts(true); paintSeason();           // the first draw, without ESPN's tip-offs (and no notification yet)
+    await Promise.all([loadTips(SEA.d), pInj]);
+    // the extra reads take about 5 seconds on a page load (12, 0.35 s apart): the screens draw first, from the ledger as it
+    // is (a new browser has none: nothing counts as locked until the reads are in), and draw again when they are (25.10.2026)
+    const D = SEA.d;
+    reads.then(r => { if (SEA.d === D || SEA.d.week === D.week) { noteReads(D, r); refreshAlerts(); rerenderSeason(); } }).catch(() => {});
     refreshAlerts();
     flushLocks();
   } catch (e) { SEA.err = String(e.message || e); }
   SEA.loading = false;
+  paintSeason();
+  if (SEA.again) { SEA.again = false; fetchSeason(true); }
+}
+function paintSeason(){
   renderHeader();
   if (S.tab === "week") renderWeek();
   if (S.tab === "fa") renderFA();
   if (S.tab === "live" && LIVE.data) renderLive();
   if (S.tab === "news") renderNews();
-  if (SEA.again) { SEA.again = false; fetchSeason(true); }
 }
 // a screen that finds no data asks for it, but never more than once in 30 seconds: a failed pull re-renders the screen,
 // and without this the screen would ask again at once, in a loop
@@ -463,6 +474,10 @@ function pState(id, Wm, mp, week){
   const pressed = !locked && pts != null && mark === lastDate && Math.abs(pts - lastFp) < 0.05;
   if (pressed) { locked = true; lockedOn = lastDate; }
   if (mark === true && !locked) { locked = true; const hit = pts != null && played.find(x => Math.abs(x.fp - pts) < 0.05); if (hit) lockedOn = hit.date; }
+  // a click on the score of an earlier game (the board): he says he locked that one. Sleeper's two copies disagree by turns
+  // and a new browser has no ledger yet, so his word wins (25.10.2026, Edwards: 40.5 from game 1, 21.5 from game 2)
+  if (!locked && typeof mark === "string" && mark !== lastDate) { const mg = played.find(x => x.date === mark); if (mg) { locked = true; lockedOn = mark; pts = mg.fp; } }
+  if (locked) pending = null;
   const out = isOut(inj);
   const k = out ? 0 : left.length;
   const exp = locked ? (pts || 0) : !k ? (pts || 0) : lastFp != null ? Math.max(lastFp, V[k]) : V[k];
@@ -632,10 +647,17 @@ function ackInjuries(ids){
 // Pressed again it takes the mark back, here only. A lock Sleeper already shows (an earlier game) has nothing to mark,
 // unless it is still unconfirmed (pending: Sleeper counts an earlier game, e.g. Edwards 40.5 from 21.10 while his latest
 // is 21.5): the press confirms it on that game at once (25.10.2026, Nati locked him after game 1 and had no button).
-function toggleLock(id){
+function toggleLock(id, date){
   const X = seasonState(), w = X && X.myR && X.D.week; if (!w) return;
   const x = [...X.me.st.filter(Boolean), ...X.me.bench, ...X.me.ir].find(y => y.id === id);
   S.locks = S.locks || {}; S.locks[w] = S.locks[w] || {};
+  // a click on the score of an earlier game of his: that is the game he locked (or, again, not)
+  if (date && x && date !== x.lastDate && x.played.some(g => g.date === date)) {
+    if (x.locked && x.lockedOn === date && !S.locks[w][id]) { toast(`${x.p.n} נעול לפי Sleeper על המשחק מ-${fmtShort(dObj(date))}`); return; }
+    if (S.locks[w][id] === date) delete S.locks[w][id];
+    else { S.locks[w][id] = date; sendLock(`lock|${w}|${id}|${date}`, x.p.n); }
+    save(); refreshAlerts(); rerenderSeason(); return;
+  }
   if (x && x.locked && !S.locks[w][id]) { toast(`${x.p.n} נעול לפי Sleeper${x.lockedOn ? ` על המשחק מ-${fmtShort(dObj(x.lockedOn))}` : ""}`); return; }
   if (S.locks[w][id] && (!x || x.locked)) delete S.locks[w][id];
   else if (x && x.pending) { S.locks[w][id] = x.pending.date; sendLock(`lock|${w}|${id}|${x.pending.date}`, x.p.n); }
@@ -842,14 +864,14 @@ function tonightInfo(X){
   const oppN = op ? [...op.st.filter(Boolean), ...op.bench].filter(x => x.g.some(g => g.date === day && !g.done)).length : 0;
   return {day, rows, oppN};
 }
-function refreshAlerts(){
+function refreshAlerts(quiet){
   const X = seasonState();
   if (!X || !X.myR) return;
   ALR.list = computeAlerts(X);
   ALR.score = X.op ? {me: X.me.cur, op: X.op.cur} : null;
   ALR.tonight = tonightInfo(X);
   pruneAcks();
-  notifyNew();
+  if (!quiet) notifyNew();
   updateBell();
 }
 const openAlerts = () => ALR.list.filter(a => !ackOf()[a.id]);

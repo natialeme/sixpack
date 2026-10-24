@@ -289,7 +289,10 @@ function renderWeek(){
     if (!g) return `<td class="${td}"></td>`;
     const opp = `${g.home ? "" : "@"}${g.opp}`;
     if (g.done && g.fp != null) {
-      const cls = x.lockedOn === d ? "k" : x.pending && x.pending.date === d ? "pk" : countedOn(x) === d && !x.locked ? (stIds.has(x.id) ? "av" : "bn") : "";
+      const cls = x.lockedOn === d ? "k" : (x.pending && x.pending.date === d) || (!x.locked && d !== x.lastDate && x.uncertain && x.uncertain.some(v => Math.abs(v - g.fp) < 0.05)) ? "pk" : countedOn(x) === d && !x.locked ? (stIds.has(x.id) ? "av" : "bn") : "";
+      // an earlier game of a starter: a click says "I locked this one" (the latest game has the button)
+      if (stIds.has(x.id) && x.played.length >= 2 && d !== x.lastDate)
+        return `<td class="${td}"><button type="button" class="sc ${cls} pick" onclick="toggleLock('${x.id}','${d}')" title="${x.lockedOn === d ? `נעול על המשחק הזה (${esc(opp)}). לחיצה מבטלת` : `${esc(opp)} · ${cls === "pk" ? "Sleeper החזיר את הציון הזה. " : ""}לחיצה: נעלתי על המשחק הזה`}">${f1(g.fp)}</button></td>`;
       return `<td class="${td}"><span class="sc ${cls}" title="${esc(opp)}">${f1(g.fp)}</span></td>`;
     }
     if (g.done) return `<td class="${td}"><span class="dim" style="font-size:11px">לא שיחק</span></td>`;
@@ -310,7 +313,7 @@ function renderWeek(){
   const stRows = me.st.map((x, i) => x ? brow(x, SLOTS[i]) : "").join(""), bnRows = me.bench.map(x => brow(x, "BN")).join(""), irRows = me.ir.map(x => brow(x, "IR")).join("");
   const cols = dates.length + 6;
   html.push(`<section class="blk s12 paper" aria-label="הלוח של השבוע" style="padding-bottom:6px">
-    <div class="bh"><h2>הלוח של השבוע</h2><span class="meta">כל משחק, מה נספר, והרף לנעילה</span><span class="sp"></span>
+    <div class="bh"><h2>הלוח של השבוע</h2><span class="meta">כל משחק, מה נספר, והרף לנעילה · נעלת על ציון ישן? לחיצה עליו מסמנת</span><span class="sp"></span>
       <div class="lgd"><span><span class="sc k" style="min-width:26px;line-height:16px;font-size:11px">40</span>נעול</span><span><span class="sc av" style="min-width:26px;line-height:16px;font-size:11px">21</span>נספר עכשיו, אפשר לנעול</span><span><span class="up" style="line-height:15px">TOR</span>משחק שיבוא</span><span><i style="display:inline-block;width:2px;height:12px;background:var(--tx2)"></i>רף</span></div>
       <div class="seg" style="margin-inline-start:12px">${[["all", "הכל"], ["st", "פותחים"], ["bn", "ספסל"]].map(([k, t]) => `<button class="${F === k ? "on" : ""}" onclick="S.wkF='${k}';save();renderWeek()">${t}</button>`).join("")}</div></div>
     <div class="tsc"><table class="tb"><thead><tr><th style="width:270px">שחקן</th>${dates.map(d => `<th class="${d === today ? "td" : ""}">${dLbl(d)}<b>${cnt2(all, d)} · ${cnt2(oppAll, d)}${d === today ? " · היום" : ""}</b></th>`).join("")}<th>למשחק</th><th>נספר</th><th>רף</th><th style="width:120px">נספר מול הרף</th><th style="width:104px">מה לעשות</th></tr></thead>
