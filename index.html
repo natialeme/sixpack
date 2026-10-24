@@ -1472,7 +1472,7 @@ details.al-done .al{margin-top:8px}
 
 }
 </style>
-<link rel="stylesheet" href="app.css?v=fe412d73">
+<link rel="stylesheet" href="app.css?v=b2af5c42">
 </head>
 <body class="app2">
 <!-- the rail (24.10.2026, design/week.html): the tabs, then the bell and the settings. #tabs holds only tab buttons -->
@@ -1553,41 +1553,51 @@ details.al-done .al{margin-top:8px}
 <!-- ============ DIALOGS ============ -->
 <dialog id="card"><button class="x" aria-label="סגירה" onclick="this.parentElement.close()"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button><div id="cardBody"></div></dialog>
 
-<dialog id="settings">
-  <h3 class="dt">הגדרות דראפט</h3>
-  <div class="field"><label>מיקום הבחירה שלי</label><select id="mySlotSel"></select></div>
-  <div class="field"><label>שמות הקבוצות לפי סדר הדראפט</label><div class="names" id="namesBox"></div></div>
-  <div class="field">
-    <label>משקל סיכון פציעה: <span id="riskLbl"></span></label>
-    <input type="range" id="riskRange" min="0" max="150" step="10">
-    <div class="hint">0% = מתעלם מפציעות. 100% = מוריד מערך השחקן לפי כמה שבועות הוא צפוי להחמיץ (רק את החלק שמעל השוק החופשי).</div>
-  </div>
-  <div class="field"><label><input type="checkbox" id="soundChk"> צליל והתראה כשמגיע התור שלי</label></div>
-  <div class="field">
-    <label for="ntfyIn">ערוץ ההתראות לטלפון (ntfy)</label>
-    <input id="ntfyIn" class="num" dir="ltr" autocomplete="off" spellcheck="false" placeholder="sixpack-…">
-    <div class="hint">מעתיקים מ-<span dir="ltr">engine/.env</span> את מה שאחרי <span dir="ltr">NTFY_TOPIC=</span>. ככה "נעלתי" בטלפון מסומן כאן תוך שנייה, ו"נעלתי" כאן עוצר את התזכורות בטלפון. נשמר רק בדפדפן הזה.</div>
-  </div>
-  <div class="field">
-    <label>סנכרון חי מ-Sleeper (Draft ID)</label>
-    <div class="row"><input id="draftIdIn" style="flex:1" class="num"><button class="btn" id="pullBtn">משוך סדר ושמות</button></div>
-    <div class="hint">כשהסנכרון דולק, כל בחירה ב-Sleeper נקלטת לבד תוך כמה שניות. סימון ידני ממשיך לעבוד כגיבוי.</div>
-  </div>
-  <div class="row" style="justify-content:space-between;margin-top:6px">
-    <button class="btn" id="resetBtn" style="color:var(--bad)">איפוס הדראפט</button>
-    <button class="btn primary" id="closeSettings">שמור וסגור</button>
-  </div>
+<!-- the settings (24.10.2026, design/sketches-settings.html): the season first, the draft folded at the bottom (open and on
+     top before the season). Every change saves at once; app.js paints the live parts (phone, permission, data) -->
+<dialog id="settings" class="sx" aria-labelledby="setT">
+  <div class="dh"><h3 id="setT">הגדרות</h3><span class="dim">נשמר רק בדפדפן הזה, מיד</span><span class="sp"></span><button class="x" type="button" id="closeSettings" aria-label="סגירה"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <section class="sec" id="setPhone">
+    <div class="st"><h4>הטלפון</h4><span id="phoneState"></span><span class="sp"></span><span class="dim" id="phoneQ"></span></div>
+    <p class="mut">"נעלתי" בטלפון מסומן כאן תוך שנייה, ו"נעלתי" כאן עוצר את התזכורות בטלפון.</p>
+    <div class="row"><input id="ntfyIn" dir="ltr" autocomplete="off" spellcheck="false" placeholder="sixpack-…" aria-label="ערוץ ההתראות לטלפון (ntfy)"><button class="btn" type="button" id="ntfyGo">חיבור</button></div>
+    <p class="dim">שם הערוץ: באפליקציית ntfy, ברשימת המנויים. או ב-<span dir="ltr">engine/.env</span>, אחרי <span dir="ltr">NTFY_TOPIC=</span>.</p>
+  </section>
+  <section class="sec">
+    <div class="st"><h4>התראות במחשב</h4></div>
+    <label class="kv"><span class="k2">צליל והתראת מערכת</span><span class="v mut">כשיש משחק לנעול או שינוי בהרכב, והדף ברקע</span><input type="checkbox" id="soundChk" class="tgl"></label>
+    <div class="kv"><span class="k2">הרשאת הדפדפן</span><span class="v" id="permState"></span></div>
+  </section>
+  <section class="sec">
+    <div class="st"><h4>ערך שחקנים</h4><span class="sp"></span><b class="n big2" id="riskLbl"></b></div>
+    <label class="kv"><span class="k2">משקל סיכון פציעה</span><span class="v"><input type="range" id="riskRange" min="0" max="150" step="10"></span></label>
+    <p class="dim">משנה את "ערך" ו"פער" בשוק החופשי ואת ההחלפות המומלצות. 0% מתעלם מפציעות, 100% מוריד מהערך לפי השבועות שהוא צפוי להחמיץ (רק את החלק שמעל השוק החופשי).</p>
+  </section>
+  <section class="sec">
+    <div class="st"><h4>הנתונים</h4><span class="sp"></span><button class="btn" type="button" id="setRefresh">רענון עכשיו</button></div>
+    <div id="dataRows"></div>
+  </section>
+  <details class="sec" id="setDraft">
+    <summary><h4>ארכיון הדראפט</h4><span class="dim" id="draftSum"></span><span class="sp"></span><svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+    <div class="kv"><span class="k2">מיקום הבחירה שלי</span><span class="v"><select id="mySlotSel"></select></span></div>
+    <div class="lbl">שמות הקבוצות לפי סדר הדראפט</div>
+    <div class="names" id="namesBox"></div>
+    <div class="kv"><span class="k2">סנכרון (Draft ID)</span><span class="v"><input id="draftIdIn" dir="ltr" autocomplete="off" spellcheck="false"></span></div>
+    <p class="dim">כשהסנכרון דולק, כל בחירה ב-Sleeper נקלטת לבד תוך כמה שניות. סימון ידני ממשיך לעבוד כגיבוי.</p>
+    <div class="row"><button class="btn" type="button" id="pullBtn">משוך סדר ושמות</button><span class="sp"></span><button class="btn lt" type="button" id="resetBtn">איפוס הדראפט</button></div>
+  </details>
+  <div class="df"><span class="sp"></span><button class="btn" type="button" id="closeSettings2">סגירה</button></div>
 </dialog>
 
 <div class="toast" id="toast"><span id="toastMsg"></span><button class="btn" id="toastUndo">ביטול</button></div>
-<div class="pop" id="alertsPop" role="dialog" aria-label="התראות" hidden></div>
+<div class="pop sx" id="alertsPop" role="dialog" aria-label="התראות" hidden></div>
 
 <script src="board.js?v=991e7cb7"></script>
 <script src="season2025.js?v=fc3f3bd8"></script>
 <script src="league_tabs.js?v=22035131"></script>
 <script src="season.js?v=345f9c67"></script>
 <script src="news.js?v=138f824a"></script>
-<script src="app.js?v=0ec31a7e"></script>
+<script src="app.js?v=9fc0d0a6"></script>
 <script>
 "use strict";
 const B = window.BOARD;
@@ -2500,8 +2510,13 @@ function openSettings(){
   $("draftIdIn").value = S.draftId;
   $("soundChk").checked = S.sound;
   $("ntfyIn").value = S.ntfyTopic || "";
-  $("settings").querySelector("h3").textContent = inSeason() ? "הגדרות" : "הגדרות דראפט";
-  $("settings").showModal();
+  // before the season the draft is what matters: open and on top
+  const pre = !inSeason(), dlg = $("settings");
+  dlg.classList.toggle("pre", pre);
+  $("setT").textContent = pre ? "הגדרות דראפט" : "הגדרות";
+  if (pre) $("setDraft").open = true;
+  if (!dlg.open) dlg.showModal();
+  paintSettings();
 }
 function readSettings(){
   S.mySlot = +$("mySlotSel").value || null;
@@ -2517,7 +2532,12 @@ function readSettings(){
   if (inSeason()) lockSyncStart();
 }
 $("settingsBtn").onclick = openSettings;
-$("closeSettings").onclick = () => { readSettings(); $("settings").close(); };
+// no "save" button: every change saves at once, and closing (also with Esc) saves what is in the fields
+$("closeSettings").onclick = $("closeSettings2").onclick = () => $("settings").close();
+$("settings").addEventListener("change", () => { readSettings(); paintSettings(); });
+$("settings").addEventListener("close", readSettings);
+$("ntfyGo").onclick = () => { readSettings(); paintSettings(); };
+$("setRefresh").onclick = () => { if (inSeason()) refreshAll(); paintSettings(); };
 $("riskRange").oninput = e => { $("riskLbl").textContent = e.target.value + "%"; };
 $("pullBtn").onclick = async () => { readSettings(); await syncOnce({force:true}); openSettings(); };
 $("resetBtn").onclick = () => { if (confirm("למחוק את כל הבחירות?")) { S.picks = []; S.extra = {}; S.skip = []; S.lastPickAt = null; save(); render(); $("settings").close(); } };

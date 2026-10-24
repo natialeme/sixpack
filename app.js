@@ -38,6 +38,82 @@ function xGate(out){
 // minutes to a tip-off, as the countdown in the lime card
 const cdTxt = t => { const m = Math.max(0, Math.round((t - Date.now()) / 60000)); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`; };
 setInterval(() => document.querySelectorAll("[data-cd]").forEach(el => { el.textContent = cdTxt(+el.dataset.cd); }), 30e3);
+// the family name, also for "Jaime Jaquez Jr."
+const surname = n => { const p = String(n || "").split(" "); return p.length > 2 && /^(Jr\.?|Sr\.?|II|III|IV)$/.test(p[p.length - 1]) ? p[p.length - 2] : p[p.length - 1]; };
+
+// ---------- an alert as a row: "מה לעשות עכשיו" and the bell's popover draw the same rows (24.10.2026) ----------
+const AGRP = a => ({lock: ["נעילות", "lock"], lineup: ["הרכב", "swap"], injury: ["פציעות", "shield"], fa: ["שוק", "userplus"], news: ["עדכונים", "news"]}[a.kind] || ["עוד", "list"]);
+// a lineup change carries its players in its id (season.js): swap|week|date|in,in>out,out
+const swapIds = a => { const m = /^swap\|\d+\|[\d-]+\|([^>]*)>(.*)$/.exec(a.id); return m ? {ins: m[1].split(",").filter(Boolean), outs: m[2].split(",").filter(Boolean)} : null; };
+function aActs(a, cls){
+  return a.act.map(x => `<button class="btn ${x.primary ? cls : "g"}" onclick="${x.ack ? `ackAlert('${esc(a.id)}')` : esc(x.fn)}">${x.primary ? xi("check", 14) : ""}${esc(x.t)}</button>`).join("");
+}
+function aWho(a){
+  if (a.pid) return `<span class="pa">${hsI(a.pid, 32)}${tlI(teamOf(a.pid))}</span>`;
+  const sw = swapIds(a), slot = /^empty\|\d+\|(\d+)$/.exec(a.id);
+  if (sw && sw.ins.length) return `<span class="pa stk">${sw.ins.slice(0, 2).map(id => hsI(id, 26)).join("")}</span>`;
+  if (slot) return `<span class="ico slot n">${SLOTS[+slot[1]]}</span>`;
+  return `<span class="ico" style="background:var(--s3);color:var(--tx2)">${xi(a.ic === "target" ? "alert" : a.ic, 16)}</span>`;
+}
+function aRow(a){
+  const sw = swapIds(a), nm = ids => ids.map(id => esc(surname(pOf(id).n))).join(", ");
+  const small = sw ? `להכניס ${nm(sw.ins)} במקום ${sw.outs.length ? nm(sw.outs) : "המשבצת הריקה"}` : strip(a.body);
+  const soon = a.due && a.due.t - Date.now() < 3 * 3600e3;
+  return `<div class="it">${aWho(a)}<div class="tx" title="${esc(strip(a.body))}"><b>${strip(a.title)}</b><small>${small}</small></div>
+    ${a.due ? `<span class="dl ${soon ? "now" : ""}">${xi("clock")}${a.due.live ? "משחק עכשיו" : esc(a.due.txt)}</span>` : ""}${aActs(a, "lime")}</div>`;
+}
+function aGroups(list){
+  const groups = [];
+  list.forEach(a => { const [g, ic] = AGRP(a); let G = groups.find(x => x.g === g); if (!G) groups.push(G = {g, ic, list: []}); G.list.push(a); });
+  return groups.map(G => `<div class="grp">${xi(G.ic)}${G.g}${G.list.length > 1 ? ` · ${G.list.length}` : ""}</div>${G.list.map(aRow).join("")}`).join("");
+}
+
+// ---------- the bell's popover: the same list as "מה לעשות עכשיו", on paper (design/sketches-settings.html #b) ----------
+// The actions stay season.js's (ackAlert, clearAllAlerts, undoClearAll, toggleLock), and so does closing on an outside click.
+function renderAlertsPop(){
+  const list = openAlerts(), n1 = list.filter(a => a.pri === 1).length, n2 = list.filter(a => a.pri === 2).length;
+  const perm = window.Notification ? Notification.permission : "";
+  const nt = !perm ? "" : perm === "granted" && S.sound ? `<span class="dim">התראות דפדפן פעילות</span>`
+    : perm === "denied" ? `<span class="dim">התראות הדפדפן חסומות</span>`
+    : `<button class="lnk" type="button" onclick="enableNotifications()">${xi("bell", 13)}הפעלת התראות דפדפן</button>`;
+  if (list.length) lastCleared = null;   // the undo is for the clear that just emptied the list
+  const clr = list.length > 1 ? `<button class="btn" type="button" onclick="clearAllAlerts()">ניקוי הכל</button>`
+    : lastCleared && lastCleared.length ? `<button class="btn" type="button" onclick="undoClearAll()">ביטול הניקוי</button>` : "";
+  $("alertsPop").innerHTML = `<div class="paper apw">
+    <div class="bh"><h2>התראות</h2><span class="meta">${list.length ? `${list.length} פתוחות` : "אין התראות פתוחות"}</span>${n1 ? `<span class="chip red">${n1} דחופים</span>` : ""}${n2 ? `<span class="chip amb">${n2} לבדוק</span>` : ""}<span class="sp"></span>${clr}<button class="x" type="button" aria-label="סגירה" onclick="closeAlertsPop()">${IC.x}</button></div>
+    <div class="apl">${list.length ? aGroups(list) : `<p class="mut ape">${SEA.d ? "הכל מסודר. כשיהיה משחק לנעול, שינוי להרכב או החתמה ששווה לעשות, זה יופיע כאן." : "מושך את השבוע מ-Sleeper…"}</p>`}</div>
+    <div class="apf">${inSeason() ? lockSyncChip().replace(' id="lockSync"', "") : ""}${nt}<span class="sp"></span><button class="lnk" type="button" onclick="closeAlertsPop();setTab('week')">למסך "השבוע שלי"</button></div></div>`;
+}
+// the phone's state is drawn in three places now: "מה לעשות עכשיו", the popover and the settings
+paintLockSync = function(){
+  document.querySelectorAll(".lsync").forEach(b => { b.outerHTML = lockSyncChip().replace(b.id ? "" : ' id="lockSync"', ""); });
+  if ($("settings").open) paintSettings();
+};
+
+// ---------- the settings: the parts that change while it is open (design/sketches-settings.html #a) ----------
+function paintSettings(){
+  const st = LSYNC.topic ? LSYNC.state : "off";
+  const [dot, txt] = {on: ["", "מחובר"], busy: ["busy", "מתחבר…"], bad: ["bad", "החיבור נפל · מנסה שוב"], off: ["off", "לא מחובר"]}[st];
+  $("phoneState").innerHTML = `<span class="chip"><i class="sdot ${dot}"></i>${txt}</span>`;
+  const q = (S.lockOut || []).length;
+  $("phoneQ").textContent = q ? `${q === 1 ? "נעילה אחת מחכה" : `${q} נעילות מחכות`} לשליחה לטלפון` : "";
+  const perm = window.Notification ? Notification.permission : "";
+  $("permState").innerHTML = perm === "granted" ? `<span class="chip">מותרת</span>`
+    : perm === "denied" ? `<span class="chip">חסומה</span><span class="dim">פותחים בסמל המנעול שליד הכתובת</span>`
+    : perm === "default" ? `<button class="btn" type="button" onclick="enableNotifications().then(paintSettings)">לאפשר</button><span class="dim">הדפדפן ישאל פעם אחת</span>`
+    : `<span class="dim">הדפדפן הזה לא שולח התראות</span>`;
+  $("riskLbl").textContent = $("riskRange").value + "%";
+  // the model's date from board.js ("2026-10-22 18:59", Israel time on the laptop that ran refresh_data.bat)
+  const gen = (window.BOARD && BOARD.generated) || "", gd = gen ? new Date(gen.replace(" ", "T")) : null;
+  const days = gd ? Math.floor((new Date().setHours(0, 0, 0, 0) - new Date(gd).setHours(0, 0, 0, 0)) / 864e5) : 0;
+  const ago = SEA.at ? Math.round((Date.now() - SEA.at) / 60000) : 0, D = SEA.d;
+  const rows = [
+    ["Sleeper", SEA.err ? `<i class="sdot bad"></i>${esc(SEA.err)}` : SEA.at ? `<i class="sdot"></i>עודכן ${ago ? `לפני ${ago} דק'` : "עכשיו"}<span class="dim">· כל 2 דקות, וכל 5 כשהדף ברקע</span>` : `<i class="sdot busy"></i>עוד לא נמשך`],
+    ["המודל", gd ? `<span class="n">${gd.getDate()}.${gd.getMonth() + 1} ${gen.slice(11, 16)}</span><span class="dim">· ${days === 0 ? "היום" : days === 1 ? "אתמול" : `לפני ${days} ימים`} · מתעדכן ב-<span dir="ltr">refresh_data.bat</span></span>` : `<span class="dim">אין <span dir="ltr">board.js</span></span>`],
+    ["שיטת הניקוד", !D ? `<span class="dim">·</span>` : scoringChanged(D.lg) ? `<i class="sdot busy"></i>השתנתה ב-Sleeper. מריצים <span dir="ltr">refresh_data.bat</span>` : "תואמת ל-Sleeper"]];
+  $("dataRows").innerHTML = rows.map(([k, v]) => `<div class="kv"><span class="k2">${k}</span><span class="v">${v}</span></div>`).join("");
+  $("draftSum").textContent = `מיקום ${S.mySlot || "—"} · ${S.names.length} קבוצות${S.draftId ? ` · Draft ID …${S.draftId.slice(-4)}` : ""}`;
+}
 
 // ---------- the top bar ----------
 let weekDatesMemo = {key: "", dates: []};
@@ -114,48 +190,53 @@ function renderWeek(){
       const x = W - (i + 1) * colW + (colW - bw) / 2, cx = x + bw / 2;
       if (d < today) { const v = vals[past.indexOf(d)], h = Math.max(1.5, Math.abs(v) * sc), up = v >= 0;
         svg += `<rect x="${x}" y="${up ? base - h : base}" width="${bw}" height="${h}" rx="3" style="fill:${up ? "var(--me)" : "var(--op)"}"/>`;
-        svg += `<text x="${cx}" y="${up ? base - h - 5 : base + h + 13}" text-anchor="middle" style="fill:${up ? "#f6a27e" : "var(--op-hi)"};font:600 12px 'Barlow Condensed'">${v > 0 ? "+" : v < 0 ? "−" : ""}${f1(Math.abs(v))}</text>`; }
+        svg += `<text x="${cx}" y="${up ? base - h - 5 : base + h + 13}" text-anchor="middle" style="fill:${up ? "#f6a27e" : "var(--op-hi)"};font:600 12px 'Barlow Condensed';direction:ltr">${v > 0 ? "+" : v < 0 ? "−" : ""}${f1(Math.abs(v))}</text>`; }
       else if (d === today) svg += `<rect x="${x - 5}" y="6" width="${bw + 10}" height="124" rx="6" style="fill:#c6f43212;stroke:#c6f43288"/><text x="${cx}" y="${base - 6}" text-anchor="middle" style="fill:var(--now);font:700 10px Heebo">היום</text>`;
       else if (d === last) { const h = Math.max(1.5, Math.abs(pj) * sc), up = pj >= 0;
-        svg += `<rect x="${x}" y="${up ? base - h : base}" width="${bw}" height="${h}" rx="3" style="fill:#ffffff0d;stroke:var(--tx3);stroke-dasharray:4 3"/><text x="${cx}" y="${up ? base - h - 5 : base + h + 13}" text-anchor="middle" style="fill:var(--tx2);font:600 12px 'Barlow Condensed'">${pj >= 0 ? "+" : "−"}${f1(Math.abs(pj))}</text>`; }
+        svg += `<rect x="${x}" y="${up ? base - h : base}" width="${bw}" height="${h}" rx="3" style="fill:#ffffff0d;stroke:var(--tx3);stroke-dasharray:4 3"/><text x="${cx}" y="${up ? base - h - 5 : base + h + 13}" text-anchor="middle" style="fill:var(--tx2);font:600 12px 'Barlow Condensed';direction:ltr">${pj >= 0 ? "+" : "−"}${f1(Math.abs(pj))}</text>`; }
       svg += `<text x="${cx}" y="152" text-anchor="middle" style="fill:${d === today ? "var(--now)" : "var(--tx3)"};font:600 11px Heebo">${WD[dObj(d).getUTCDay()]}'</text>`;
     });
     const lastV = vals.length ? vals[vals.length - 1] : null;
     html.push(`<section class="blk s3 lead" aria-label="מי מוביל"><div class="bh"><h2>מי מוביל</h2><span class="meta">בסוף כל יום</span></div>
       <svg viewBox="0 0 300 158" role="img" aria-label="ההפרש בסוף כל יום והצפי לסוף השבוע">${svg}</svg>
-      <div class="foot">${lastV != null ? `<span class="n" style="color:${lastV >= 0 ? "var(--me-hi)" : "var(--op-hi)"}">${lastV >= 0 ? "+" : "−"}${f1(Math.abs(lastV))}</span><span class="mut" style="font-size:12.5px">${lastV >= 0 ? "מוביל" : "מפגר"} אחרי ${WD[dObj(past[past.length - 1]).getUTCDay()]}'</span>` : `<span class="mut" style="font-size:12.5px">עוד אין משחקים השבוע</span>`}<span style="flex:1"></span><span class="n" style="font-size:16px;color:var(--tx2)">${pj >= 0 ? "+" : "−"}${f1(Math.abs(pj))}</span><span class="dim" style="font-size:12px">בצפי</span></div>
+      <div class="foot">${lastV != null ? `<span class="n" dir="ltr" style="color:${lastV >= 0 ? "var(--me-hi)" : "var(--op-hi)"}">${lastV >= 0 ? "+" : "−"}${f1(Math.abs(lastV))}</span><span class="mut" style="font-size:12.5px">${lastV >= 0 ? "מוביל" : "מפגר"} אחרי ${WD[dObj(past[past.length - 1]).getUTCDay()]}'</span>` : `<span class="mut" style="font-size:12.5px">עוד אין משחקים השבוע</span>`}<span style="flex:1"></span><span class="n" dir="ltr" style="font-size:16px;color:var(--tx2)">${pj >= 0 ? "+" : "−"}${f1(Math.abs(pj))}</span><span class="dim" style="font-size:12px">בצפי</span></div>
       <div class="lg"><span><i style="background:var(--me)"></i>אתה מוביל</span><span><i style="background:var(--op)"></i>${esc(tName(D, op.uid))} מוביל</span><span><i style="border:1.5px dashed var(--tx3)"></i>צפי</span></div></section>`);
   } else html.push(`<section class="blk s6"><div class="bh"><h2>המאץ'</h2></div><p class="mut">אין מאץ'אפ לשבוע ${D.week} עדיין.</p></section><section class="blk s3"></section>`);
 
   // ---- the next thing to do (lime) and the queue ----
   const alerts = openAlerts(), first = alerts[0];
-  const actBtns = (a, cls) => a.act.map(x => `<button class="btn ${x.primary ? cls : "g"}" onclick="${x.ack ? `ackAlert('${esc(a.id)}')` : esc(x.fn)}">${x.primary ? xi("check", 14) : ""}${esc(x.t)}</button>`).join("");
   if (first) {
-    const due = first.due;
-    html.push(`<section class="blk s3 nx" aria-label="הדבר הבא"><div class="bh"><h2>הדבר הבא</h2><span class="sp"></span>${alerts.length > 1 ? `<a href="#q" onclick="document.getElementById('q').scrollIntoView({behavior:'smooth',block:'center'});return false">ועוד ${alerts.length - 1} בתור</a>` : ""}</div>
-      <h3>${strip(first.title)}</h3><p>${strip(first.body).slice(0, 120)}</p>
-      ${first.pid ? `<img class="cut" src="${PF(first.pid)}" alt="" onerror="this.remove()">` : ""}
+    const due = first.due, slot = /^empty\|\d+\|(\d+)$/.exec(first.id);
+    // the picture says what kind of thing it is (24.10.2026): his cut-out, two-in-two-out for a lineup change, the slot
+    // for an empty one, a warning for the scoring. Until then an alert without one player left an empty corner.
+    let art = first.pid ? `<img class="cut" src="${PF(first.pid)}" alt="" onerror="this.remove()">` : "", txt = strip(first.body).slice(0, 120), cls = "";
+    if (swapIds(first) && plan.ins.length) {
+      const r1 = v => Math.round(v * 10) / 10;
+      const why = x => !plan.tonight.has(x.id) ? (x.left.length ? `לא משחק ${plan.slate === today ? "היום" : `ב-${dLbl(plan.slate)}`}` : "סיים את השבוע") : isOut(x.inj) ? "בחוץ" : `צפי ${f1(x.exp)}`;
+      const pp = (x, v) => `<div class="pp">${hsI(x.id, 34)}<span><b>${esc(surname(x.p.n))}</b><small>${v}</small></span></div>`;
+      // the gain only when every number it adds up is on the card: each one out plays in that slate and isn't out
+      const sure = plan.outs.length && plan.outs.every(x => plan.tonight.has(x.id) && !isOut(x.inj));
+      const gain = plan.ins.reduce((s, x) => s + r1(plan.worth(x)), 0) - plan.outs.reduce((s, x) => s + r1(x.exp), 0);
+      txt = `${sure ? `${sg(gain)} בצפי. ` : ""}משחק מהספסל לא נספר ואי אפשר לנעול אותו.`;
+      art = `<div class="swp"><div class="col"><span class="k">נכנסים</span>${plan.ins.slice(0, 3).map(x => pp(x, `צפי ${f1(plan.worth(x))}`)).join("")}</div>
+        <span class="k mid">במקום</span><div class="col out"><span class="k">לספסל</span>${plan.outs.length ? plan.outs.slice(0, 3).map(x => pp(x, why(x))).join("") : `<div class="pp"><span><b>משבצת ריקה</b></span></div>`}</div></div>`;
+      cls = " sw";
+    } else if (slot) { art = `<div class="nx-art slot n">${SLOTS[+slot[1]]}</div>`; cls = " sw"; }
+    else if (!first.pid) { art = `<div class="nx-art ic">${xi("alert", 40)}</div>`; cls = " sw"; }
+    html.push(`<section class="blk s3 nx${cls}" aria-label="הדבר הבא"><div class="bh"><h2>הדבר הבא</h2><span class="sp"></span>${alerts.length > 1 ? `<a href="#q" onclick="document.getElementById('q').scrollIntoView({behavior:'smooth',block:'center'});return false">ועוד ${alerts.length - 1} בתור</a>` : ""}</div>
+      <h3>${strip(first.title)}</h3><p>${txt}</p>
+      ${art}
       <div class="when">${due ? `<div><div class="k">${due.live ? "המשחק כבר התחיל" : "עד"}</div><div class="due n">${esc(due.txt)}</div></div>${!due.live && due.t > Date.now() ? `<div><div class="k">עוד</div><div class="cd n" data-cd="${due.t}">${cdTxt(due.t)}</div></div>` : ""}` : ""}</div>
-      <div class="acts">${actBtns(first, "")}<a class="btn g" href="${SLEEPER_URL}" target="_blank" rel="noopener">Sleeper${xi("ext", 12)}</a></div></section>`);
+      <div class="acts">${aActs(first, "")}<a class="btn g" href="${SLEEPER_URL}" target="_blank" rel="noopener">Sleeper${xi("ext", 12)}</a></div></section>`);
   } else {
     const T = ALR.tonight, r0 = T && T.rows.find(r => r.tip);
     html.push(`<section class="blk s3 nx" aria-label="הדבר הבא"><div class="bh"><h2>הדבר הבא</h2></div><h3>הכל מסודר</h3>
       <p>${T ? `אין מה לנעול או להחליף כרגע. ${T.rows.length} שחקנים שלך משחקים ב-${dLbl(T.day)}.` : "אין לך עוד משחקים השבוע."}</p>
       ${r0 ? `<img class="cut" src="${PF(r0.x.id)}" alt="" onerror="this.remove()"><div class="when"><div><div class="k">המשחק הבא</div><div class="due n">${ilTime(r0.tip.t, false)}</div></div><div><div class="k">עוד</div><div class="cd n" data-cd="${r0.tip.t}">${cdTxt(r0.tip.t)}</div></div></div>` : ""}</section>`);
   }
-  const GRP = a => ({lock: ["נעילות", "lock"], lineup: ["הרכב", "swap"], injury: ["פציעות", "shield"], fa: ["שוק", "userplus"], news: ["עדכונים", "news"]}[a.kind] || ["עוד", "list"]);
-  const qItems = alerts.slice(1), groups = [];
-  qItems.forEach(a => { const [g, ic] = GRP(a); let G = groups.find(x => x.g === g); if (!G) groups.push(G = {g, ic, list: []}); G.list.push(a); });
-  const soon = t => t && t - Date.now() < 3 * 3600e3;
-  const qRow = a => {
-    const p = a.pid ? pOf(a.pid) : null;
-    const who = p ? `<span class="pa">${hsI(a.pid, 32)}${tlI(teamOf(a.pid))}</span>` : `<span class="ico" style="background:var(--s3);color:var(--tx2)">${xi(a.ic === "target" ? "alert" : a.ic, 16)}</span>`;
-    return `<div class="it">${who}<div class="tx" title="${esc(strip(a.body))}"><b>${strip(a.title)}</b><small>${strip(a.body)}</small></div>
-      ${a.due ? `<span class="dl ${soon(a.due.t) ? "now" : ""}">${xi("clock")}${a.due.live ? "משחק עכשיו" : esc(a.due.txt)}</span>` : ""}${actBtns(a, "lime")}</div>`;
-  };
   const n1 = alerts.filter(a => a.pri === 1).length, n2 = alerts.filter(a => a.pri === 2).length;
   html.push(`<section class="blk s5 paper" id="q" aria-label="מה לעשות עכשיו"><div class="bh"><h2>מה לעשות עכשיו</h2>${n1 ? `<span class="chip red">${n1} דחופים</span>` : ""}${n2 ? `<span class="chip amb">${n2} לבדוק</span>` : ""}<span class="sp"></span>${lockSyncChip()}</div>
-    ${groups.length ? groups.map(G => `<div class="grp">${xi(G.ic)}${G.g}</div>${G.list.map(qRow).join("")}`).join("") : `<p class="mut" style="margin:6px 0 0">${first ? "מעבר לדבר הבא אין עוד משימות." : "אין משימות פתוחות."}</p>`}</section>`);
+    ${alerts.length > 1 ? aGroups(alerts.slice(1)) : `<p class="mut" style="margin:6px 0 0">${first ? "מעבר לדבר הבא אין עוד משימות." : "אין משימות פתוחות."}</p>`}</section>`);
 
   // ---- tonight: the next game day, by game, Israel time ----
   const T = ALR.tonight;
