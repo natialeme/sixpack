@@ -209,7 +209,7 @@ function renderWeek(){
     const due = first.due, slot = /^empty\|\d+\|(\d+)$/.exec(first.id);
     // the picture says what kind of thing it is (24.10.2026): his cut-out, two-in-two-out for a lineup change, the slot
     // for an empty one, a warning for the scoring. Until then an alert without one player left an empty corner.
-    let art = first.pid ? `<img class="cut" src="${PF(first.pid)}" alt="" onerror="this.remove()">` : "", txt = strip(first.body).slice(0, 120), cls = "";
+    let art = first.pid ? pfr(first.pid, 150, 128, teamOf(first.pid), "lime") : "", txt = strip(first.body).slice(0, 120), cls = "";
     if (swapIds(first) && plan.ins.length) {
       const r1 = v => Math.round(v * 10) / 10;
       const why = x => !plan.tonight.has(x.id) ? (x.left.length ? `לא משחק ${plan.slate === today ? "היום" : `ב-${dLbl(plan.slate)}`}` : "סיים את השבוע") : isOut(x.inj) ? "בחוץ" : `צפי ${f1(x.exp)}`;
@@ -225,8 +225,7 @@ function renderWeek(){
     else if (!first.pid) { art = `<div class="nx-art ic">${xi("alert", 40)}</div>`; cls = " sw"; }
     html.push(`<section class="blk s3 nx${cls}" aria-label="הדבר הבא"><div class="bh"><h2>הדבר הבא</h2><span class="sp"></span>${alerts.length > 1 ? `<a href="#q" onclick="document.getElementById('q').scrollIntoView({behavior:'smooth',block:'center'});return false">ועוד ${alerts.length - 1} בתור</a>` : ""}</div>
       <h3>${strip(first.title)}</h3><p>${txt}</p>
-      ${art}
-      <div class="when">${due ? `<div><div class="k">${due.live ? "המשחק כבר התחיל" : "עד"}</div><div class="due n">${esc(due.txt)}</div></div>${!due.live && due.t > Date.now() ? `<div><div class="k">עוד</div><div class="cd n" data-cd="${due.t}">${cdTxt(due.t)}</div></div>` : ""}` : ""}</div>
+      ${(h => first.pid && !cls ? `<div class="nx-row">${art}${h}</div>` : `${art}${h}`)(`<div class="when">${due ? `<div><div class="k">${due.live ? "המשחק כבר התחיל" : "עד"}</div><div class="due n">${esc(due.txt)}</div></div>${!due.live && due.t > Date.now() ? `<div><div class="k">עוד</div><div class="cd n" data-cd="${due.t}">${cdTxt(due.t)}</div></div>` : ""}` : ""}</div>`)}
       <div class="acts">${aActs(first, "")}<a class="btn g" href="${SLEEPER_URL}" target="_blank" rel="noopener">Sleeper${xi("ext", 12)}</a></div></section>`);
   } else {
     const T = ALR.tonight, r0 = T && T.rows.find(r => r.tip);
@@ -323,10 +322,9 @@ function renderWeek(){
   let best = null;
   me.st.forEach(x => x && x.played.forEach(g => { if (!best || g.fp > best.g.fp) best = {x, g}; }));
   html.push(best ? `<section class="blk s3 hot" aria-label="היד החמה"><div class="bh"><h2>היד החמה</h2><span class="meta">המשחק הכי טוב שלך השבוע</span></div>
-      <img class="cut" src="${PF(best.x.id)}" alt="" onerror="this.remove()">
-      <div style="position:relative;max-width:150px"><span class="acc"></span><div class="nm">${esc(best.x.p.n)}</div>
-        <small>${esc(best.x.team)} · ${dLbl(best.g.date)} ${best.g.home ? "מול" : "ב-"}${esc(best.g.opp)} · ${best.x.lockedOn === best.g.date ? "נעול" : countedOn(best.x) === best.g.date ? "נספר עכשיו" : "לא נספר"}</small>
-        <div class="val n" style="margin-top:10px">${f1(best.g.fp)}</div><small>הממוצע שלו ${f1(best.x.m)} · <bdi dir="ltr">+${f1(best.g.fp - best.x.m)}</bdi> מעליו</small></div></section>`
+      <span class="acc"></span><div class="nm">${esc(best.x.p.n)}</div>
+      <small>${esc(best.x.team)} · ${dLbl(best.g.date)} ${best.g.home ? "מול" : "ב-"}${esc(best.g.opp)} · ${best.x.lockedOn === best.g.date ? "נעול" : countedOn(best.x) === best.g.date ? "נספר עכשיו" : "לא נספר"}</small>
+      <div class="hot-row">${pfr(best.x.id, 132, 112, best.x.team)}<div><div class="val n">${f1(best.g.fp)}</div><small>הממוצע שלו ${f1(best.x.m)} · <bdi dir="ltr">+${f1(best.g.fp - best.x.m)}</bdi> מעליו</small></div></div></section>`
     : `<section class="blk s3 hot" aria-label="היד החמה"><div class="bh"><h2>היד החמה</h2></div><p class="mut">עוד אין משחקים השבוע.</p></section>`);
   const sw = bestSwaps(X, 4), mxg = Math.max(1, ...sw.map(s => s.g));
   html.push(`<section class="blk s3 paper" aria-label="החלפות בשוק"><div class="bh"><h2>החלפות בשוק</h2><span class="meta">כל הסגל, עם העמדות</span><span class="sp"></span><a href="#" onclick="setTab('fa');return false">לכל השוק</a></div>
@@ -369,14 +367,14 @@ function renderFA(){
   if (sw.length) {
     const i = (F.swI || 0) % sw.length, s = sw[i], c = s.c, d = s.d, nm = String(c.p.n).split(" ");
     html.push(`<section class="blk s6 swap" aria-label="ההחלפה הכי טובה"><div class="bh"><h2>ההחלפה הכי טובה</h2><span class="meta">לשבוע הזה</span><span class="sp"></span>${sw.length > 1 ? `<a href="#" onclick="faNext(${sw.length});return false">החלפה ${i + 1} מתוך ${sw.length}</a>` : ""}</div>
-      <div class="g"><img class="cut" src="${PF(c.p.id)}" alt="" onerror="this.style.visibility='hidden'">
+      <div class="g">${pfr(c.p.id, 200, 176, c.team)}
         <div class="who"><div class="tag"><span class="pill">להחתים</span>${tlI(c.team)}${esc(c.team)} · ${(c.p.pos || []).join("/")}${c.p.age ? ` · גיל ${c.p.age}` : ""}</div>
           <div class="name">${esc(nm[0])}<br>${esc(nm.slice(1).join(" "))}</div>
-          <div class="strip"><div><small>ערך שבועי</small><span class="n">${f1(c.val)}</span></div><div><small>תחזית</small><span class="n">${f1(c.p.fpg)}</span></div><div><small>בפועל</small><span class="n">${avgTxt(c.p.id)}</span></div>
-            <div><small>דקות</small><span class="n">${minTxt(c)}</span></div><div><small>השבוע</small><span class="n">${c.left}<em>/${c.games}</em></span></div><div><small>שבוע הבא</small><span class="n">${c.next || "·"}</span></div></div>
-          <div class="acts"><a class="btn w" href="${SLEEPER_URL}" target="_blank" rel="noopener">להחתים ב-Sleeper ${xi("ext", 13)}</a><button class="btn" onclick="openCard('${c.p.id}')">כרטיס שחקן</button></div></div>
+        </div>
         <div class="gain"><div><small>לשבוע, לסגל</small><div class="n big2">+${f1(s.g)}</div><div class="vg">פער בערך <b>${gapTxt(c.val - adj(d.p))}</b></div></div>
-          <div class="out">${hsI(d.id, 44)}<span class="rel">לשחרר</span><b>${esc(d.p.n)}</b><small>${esc(d.team)} · ${f1(adj(d.p))} · בפועל ${avgPlain(d.id)}</small></div></div></div></section>`);
+          <div class="out">${pfr(d.id, 92, 92, d.team)}<span class="rel">לשחרר</span><b>${esc(d.p.n)}</b><small>${esc(d.team)} · ${f1(adj(d.p))} · בפועל ${avgPlain(d.id)}</small></div></div></div>          <div class="strip sw-strip"><div><small>ערך שבועי</small><span class="n">${f1(c.val)}</span></div><div><small>תחזית</small><span class="n">${f1(c.p.fpg)}</span></div><div><small>בפועל</small><span class="n">${avgTxt(c.p.id)}</span></div>
+            <div><small>דקות</small><span class="n">${minTxt(c)}</span></div><div><small>השבוע</small><span class="n">${c.left}<em>/${c.games}</em></span></div><div><small>שבוע הבא</small><span class="n">${c.next || "·"}</span></div></div>
+          <div class="acts"><a class="btn w" href="${SLEEPER_URL}" target="_blank" rel="noopener">להחתים ב-Sleeper ${xi("ext", 13)}</a><button class="btn" onclick="openCard('${c.p.id}')">כרטיס שחקן</button></div></section>`);
     const others = sw.filter((_, k) => k !== i);
     html.push(`<section class="blk s3 paper" aria-label="עוד החלפות"><div class="bh"><h2>${others.length > 1 ? `עוד ${others.length} החלפות` : "עוד החלפה"}</h2></div>
       ${others.length ? others.map(o => `<div class="alt"><div class="row">${hsI(o.c.p.id, 40)}<div class="tx"><b>${nameLink(o.c.p)}</b><small>${esc(o.c.team)} · ${(o.c.p.pos || []).join("/")} · ערך ${f1(o.c.val)}</small></div><div style="text-align:left"><div class="n v">+${f1(o.g)}</div><small>לסגל</small></div></div>
@@ -688,3 +686,99 @@ if (SQ.get("diag")) setTimeout(() => {
   const res = {big: big.slice(0, 12), sw: de.scrollWidth, cw: W, cols: v && getComputedStyle(v).gridTemplateColumns, blocks: v ? [...v.children].map(b => `${b.getAttribute("aria-label") || b.className} ${Math.round(b.getBoundingClientRect().width)}`) : [], wide: out.slice(0, 14)};
   document.body.insertAdjacentHTML("beforeend", `<pre id="diag">${esc(JSON.stringify(res))}</pre>`);
 }, 12000);
+
+
+// ---------- the player card in season (25.10.2026, design/sketches-card.html) ----------
+// A framed photo, one hero number (the weekly value), the other numbers in a strip, the game log and the points breakdown
+// side by side, and no scroll. On a phone three tabs (summary, games, forecast) with the actions fixed at the bottom.
+// The draft keeps its old card: openCard in app.html calls this one only in season.
+let CARDT = "sum";
+// a player's photo (the 300x201 cut-out) in a rounded frame; the team's logo in its corner
+const pfr = (id, w, h, team, cls = "") => `<span class="pf ${cls}" style="width:${w}px;height:${h}px"><img src="${PF(id)}" alt="" onerror="this.style.visibility='hidden'">${team ? tlI(team) : ""}</span>`;
+function cardTab(k){
+  CARDT = k; $("card").dataset.tab = k;
+  document.querySelectorAll("#card .cd-tabs button").forEach(b => b.classList.toggle("on", b.dataset.k === k));
+}
+function openCardSeason(id){
+  const p = PMAP.get(id); if (!p) return;
+  const dlg = $("card"), X = seasonState(), D = X && X.D, team = teamOf(id) || p.t;
+  dlg.classList.add("sx", "cd2"); dlg.dataset.tab = CARDT;
+  const mine = X && X.me ? [...X.me.st, ...X.me.bench, ...X.me.ir].some(x => x && x.id === id) : false;
+  const owner = D && !mine ? D.rosters.find(r => (r.players || []).includes(id) || (r.reserve || []).includes(id)) : null;
+  const fa = X && X.fa && !mine && !owner ? X.fa.list.find(x => x.p.id === id) : null, worst = X && X.fa && X.fa.worst;
+  const inj = injOf(id), n = X && X.Wm.byTeam[team] ? X.Wm.byTeam[team].length : 0;
+  const chips = [mine ? `<span class="chip">בסגל שלך</span>` : owner ? `<span class="chip">אצל ${esc(tName(D, owner.owner_id))}</span>` : X ? `<span class="chip">שחקן פנוי</span>` : "",
+    inj ? `<span class="chip ${isOut(inj) ? "red" : "amb"}">${esc(injTxt(inj))}</span>` : "",
+    D && n ? `<span class="chip">שבוע ${D.week}: ${n} משחקים</span>` : ""].join("");
+  const gap = fa && worst ? `פער ${sg(adj(p) - adj(worst.p))} מול ${esc(worst.p.n)}` : "";
+  const parts = p.pl ? CAT.map(([k, nm]) => [nm, (p.pl[k] || 0) * (SC[k] || 0)]) : [];
+  const toPts = p.pl ? (p.pl.to || 0) * (SC.to || 0) : 0, pos = parts.reduce((a, x) => a + x[1], 0), other = Math.max(0, p.fpg - pos - toPts);
+  if (other > 0.5) parts.push(["בונוסים", other]);
+  const sum = parts.reduce((a, x) => a + x[1], 0) || 1, top = Math.max(...parts.map(x => x[1]), 1);
+  const bd = parts.sort((a, b) => b[1] - a[1]).map(([nm, v]) => `<div class="cd-bd"><span>${nm}</span><span class="bar"><i style="width:${(v / top * 100).toFixed(1)}%"></i></span><span class="v">${Math.round(v / sum * 100)}%</span></div>`).join("")
+    + (toPts ? `<div class="cd-bd"><span>איבודים</span><span class="bar"><i style="width:${Math.min(100, Math.abs(toPts) / top * 100).toFixed(1)}%;opacity:.5"></i></span><span class="v">−${f1(Math.abs(toPts))}</span></div>` : "");
+  const line = (lbl, l, dim) => l ? `<tr><td class="${dim ? "dim" : ""}">${lbl}</td>${["pts", "reb", "ast", "stl", "blk", "to", "tpm", "min"].map(k => `<td class="num ${dim ? "dim" : ""}">${f1(l[k] || 0)}</td>`).join("")}</tr>` : "";
+  const sub = [`<span>${esc(team || "FA")}</span>`, (p.pos || []).length ? `<span class="pos ${String(p.pos[0]).toLowerCase()}">${esc(p.pos.join("/"))}</span>` : "",
+    p.num != null ? `#${esc(p.num)}` : "", p.age ? `גיל ${p.age}` : "", p.ht ? `<span class="n">${esc(p.ht)}</span> מ'` : "", p.wt ? `<span class="n">${esc(p.wt)}</span> ק"ג` : ""].filter(Boolean).join(" · ");
+  $("cardBody").innerHTML = `
+    <div class="cd-h">${pfr(id, 112, 112, team)}
+      <div class="cd-t"><div class="cd-nm">${esc(p.n)}<span class="cd-vmini n">${f1(adj(p))}</span></div>
+        <div class="cd-meta">${team && team !== "FA" ? tlI(team) : ""}${sub}</div><div class="cd-chips">${chips}</div></div>
+      <button class="cd-x" type="button" aria-label="סגירה" onclick="$('card').close()">${IC.x}</button></div>
+    <div class="cd-tabs" role="tablist">${[["sum", "סיכום"], ["games", "משחקים"], ["proj", "תחזית"]].map(([k, t]) => `<button role="tab" data-k="${k}" class="${k === CARDT ? "on" : ""}" onclick="cardTab('${k}')">${t}</button>`).join("")}</div>
+    <div class="cd-hero">
+      <div class="cd-hv"><small>ערך שבועי</small><span class="n">${f1(adj(p))}</span><div class="gap">${gap}</div></div>
+      <div class="cd-strip">
+        <div><small>תחזית למשחק</small><span class="n">${f1(p.fpg)}</span></div>
+        <div><small>תקרה (10% הטובים)</small><span class="n">${p.p90 ? f1(p.p90) : "—"}</span></div>
+        <div><small>זמינות צפויה</small><span class="n">${Math.round((p.av ?? 0.85) * 100)}%</span></div>
+        <div><small>דקות צפויות</small><span class="n">${p.min ? f1(p.min) : "—"}</span></div>
+        <div><small>עונה שעברה</small><span class="n">${p.fpgL ? f1(p.fpgL) : "—"}</span><em>${p.gpL || 0} משחקים</em></div>
+        <div><small>ADP · דירוג מודל</small><span class="n"><bdi dir="ltr">${p.adp ? f1(p.adp) : "—"} · ${p.rk ?? "—"}</bdi></span></div></div></div>
+    <div class="cd-sumwrap" id="cdSum"></div>
+    <div class="cd-body">
+      <section class="cd-c" data-p="games"><div id="cdHist"></div></section>
+      <section class="cd-c" data-p="proj">
+        ${parts.length ? `<h6>מאיפה הנקודות <span>תחזית למשחק</span></h6><div>${bd}</div>` : ""}
+        <h6>שורה סטטיסטית למשחק</h6>
+        <table class="cd-t"><tr><th></th><th class="num">נק'</th><th class="num">ריב'</th><th class="num">אס'</th><th class="num">חט'</th><th class="num">חס'</th><th class="num">איב'</th><th class="num">3</th><th class="num">דק'</th></tr>${line("תחזית", p.pl)}${line("עונה שעברה", p.ll, true)}</table>
+        ${calcHtml(p)}</section></div>
+    <div class="cd-f"><button class="btn lt" type="button" onclick="toggleStar('${id}')">${xi("star", 14)}${isStar(id) ? "ברשימת המעקב" : "לרשימת המעקב"}</button><span class="sp"></span>
+      <a class="btn w" href="${SLEEPER_URL}" target="_blank" rel="noopener">${fa ? "להחתים ב-Sleeper" : "Sleeper"} ${xi("ext", 13)}</a></div>`;
+  if (!dlg.open) dlg.showModal();
+  dlg.setAttribute("tabindex", "-1"); dlg.focus({preventScroll: true});     // the first button would take the focus ring
+  cardLog(p);
+}
+// the game log, pulled from Sleeper when the card opens: this season or last
+async function cardLog(p, season){
+  const box = $("cdHist"), sumBox = $("cdSum");
+  if (!box) return;
+  const cur = String((SEA.d && SEA.d.season) || new Date().getFullYear()), prev = String(+cur - 1);
+  CARDH.pid = p.id;
+  box.innerHTML = `<div class="cd-skel"></div>`;
+  let logs;
+  try { logs = await Promise.all([playerLog(p.id, cur), playerLog(p.id, prev)]); }
+  catch (e) { if (CARDH.pid === p.id) box.innerHTML = `<p class="dim">לא הצלחתי למשוך את המשחקים מ-Sleeper (${esc(String(e.message || e))}).</p>`; return; }
+  if (CARDH.pid !== p.id || !$("card").open) return;
+  const [now, last] = logs;
+  const sel = season || (now.length ? cur : prev), games = sel === cur ? now : last;
+  CARDH.season = sel;
+  const head = `<h6>היסטוריית נקודות <span>בניקוד של הליגה</span><span class="sp"></span><span class="seg">${[[cur, `העונה (${now.length})`], [prev, `עונה שעברה (${last.length})`]].map(([s, t]) =>
+    `<button class="${s === sel ? "on" : ""}" onclick="cardLog(PMAP.get('${p.id}'), '${s}')">${t}</button>`).join("")}</span></h6>`;
+  if (!games.length) { box.innerHTML = `${head}<p class="dim" style="margin:10px 0 0">${sel === cur ? "עוד לא שיחק העונה." : "לא שיחק בעונה הזאת."}</p>`; if (sumBox) sumBox.innerHTML = ""; return; }
+  const fps = games.map(g => g.fp), avg = mean(fps), isCur = sel === cur && p.fpg, ref = isCur ? p.fpg : avg;
+  const tp = Math.max(...fps, ref) || 1, best = Math.max(...fps), above = fps.filter(v => v >= ref).length;
+  const wd = s => `${WD[dObj(s).getUTCDay()]}' ${dObj(s).getUTCDate()}.${dObj(s).getUTCMonth() + 1}`;
+  const bars = games.map(g => `<i class="${g.fp === best ? "top" : ""}" style="height:${Math.max(3, g.fp / tp * 100).toFixed(1)}%" title="${wd(g.date)} · ${g.away ? "@" : "vs "}${esc(g.opp)} · ${f1(g.fp)}"></i>`).join("");
+  const refTxt = isCur ? `התחזית למשחק (${f1(ref)})` : `הממוצע (${f1(ref)})`;
+  const chart = `<div class="cd-chart" style="--g:${games.length > 12 ? 4 : games.length > 6 ? 10 : 24}px"><div class="cd-bars">${bars}</div><span class="cd-ref" style="bottom:calc(22px + (100% - 28px) * ${(ref / tp).toFixed(3)})" title="${refTxt}"><span>קו מקווקו = ${refTxt}</span></span>
+    <div class="cd-ax"><span>${wd(games[0].date)}</span><span>${wd(games[games.length - 1].date)}</span></div></div>`;
+  const strip = `<div class="cd-sum"><div><small>ממוצע</small><span class="n">${f1(avg)}</span></div><div><small>הכי טוב</small><span class="n">${f1(best)}</span></div><div><small>משחקים</small><span class="n">${games.length}</span></div><div><small>${isCur ? "מעל התחזית" : "מעל הממוצע"}</small><span class="n">${above}/${games.length}</span></div></div>`;
+  const rows = games.slice(-8).reverse().map((g, i) => { const st = g.s;
+    return `<tr><td>${wd(g.date)}</td><td dir="ltr">${g.away ? "@" : ""}${esc(g.opp)}</td><td class="num">${Math.round(g.min)}</td>${["pts", "reb", "ast"].map(k => `<td class="num">${st[k] || 0}</td>`).join("")}<td class="num hide-sm">${st.stl || 0}</td><td class="num hide-sm">${st.blk || 0}</td><td class="num hide-sm">${st.to || 0}</td><td class="num ${i === 0 ? "" : "dim"}"><b>${f1(g.fp)}</b></td></tr>`; }).join("");
+  box.innerHTML = `${head}${chart}${strip}
+    <div class="cd-log"><table class="cd-t"><tr><th>תאריך</th><th>יריב</th><th class="num">דק'</th><th class="num">נק'</th><th class="num">ריב'</th><th class="num">אס'</th><th class="num hide-sm">חט'</th><th class="num hide-sm">חס'</th><th class="num hide-sm">איב'</th><th class="num">ניקוד</th></tr>${rows}</table></div>
+    ${games.length > 8 ? `<p class="note">8 המשחקים האחרונים בטבלה. בגרף כל ${games.length}.</p>` : ""}`;
+  // the phone's summary tab: the same numbers without the table
+  if (sumBox) sumBox.innerHTML = `${strip.replace("cd-sum", "cd-sum cd-sum3")}${chart.replace("cd-chart", "cd-chart cd-mini")}`;
+}

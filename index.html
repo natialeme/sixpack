@@ -1472,7 +1472,7 @@ details.al-done .al{margin-top:8px}
 
 }
 </style>
-<link rel="stylesheet" href="app.css?v=ea83c32d">
+<link rel="stylesheet" href="app.css?v=7e88e037">
 </head>
 <body class="app2">
 <!-- the rail (24.10.2026, design/week.html): the tabs, then the bell and the settings. #tabs holds only tab buttons -->
@@ -1557,6 +1557,8 @@ details.al-done .al{margin-top:8px}
      top before the season). Every change saves at once; app.js paints the live parts (phone, permission, data) -->
 <dialog id="settings" class="sx" aria-labelledby="setT">
   <div class="dh"><h3 id="setT">הגדרות</h3><span class="dim">נשמר רק בדפדפן הזה, מיד</span><span class="sp"></span><button class="x" type="button" id="closeSettings" aria-label="סגירה"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="cols">
+  <div>
   <section class="sec" id="setPhone">
     <div class="st"><h4>הטלפון</h4><span id="phoneState"></span><span class="sp"></span><span class="dim" id="phoneQ"></span></div>
     <p class="mut">"נעלתי" בטלפון מסומן כאן תוך שנייה, ו"נעלתי" כאן עוצר את התזכורות בטלפון.</p>
@@ -1568,6 +1570,8 @@ details.al-done .al{margin-top:8px}
     <label class="kv"><span class="k2">צליל והתראת מערכת</span><span class="v mut">כשיש משחק לנעול או שינוי בהרכב, והדף ברקע</span><input type="checkbox" id="soundChk" class="tgl"></label>
     <div class="kv"><span class="k2">הרשאת הדפדפן</span><span class="v" id="permState"></span></div>
   </section>
+  </div>
+  <div>
   <section class="sec">
     <div class="st"><h4>ערך שחקנים</h4><span class="sp"></span><b class="n big2" id="riskLbl"></b></div>
     <label class="kv"><span class="k2">משקל סיכון פציעה</span><span class="v"><input type="range" id="riskRange" min="0" max="150" step="10"></span></label>
@@ -1577,6 +1581,8 @@ details.al-done .al{margin-top:8px}
     <div class="st"><h4>הנתונים</h4><span class="sp"></span><button class="btn" type="button" id="setRefresh">רענון עכשיו</button></div>
     <div id="dataRows"></div>
   </section>
+  </div>
+  </div>
   <details class="sec" id="setDraft">
     <summary><h4>ארכיון הדראפט</h4><span class="dim" id="draftSum"></span><span class="sp"></span><svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
     <div class="kv"><span class="k2">מיקום הבחירה שלי</span><span class="v"><select id="mySlotSel"></select></span></div>
@@ -1597,7 +1603,7 @@ details.al-done .al{margin-top:8px}
 <script src="league_tabs.js?v=22035131"></script>
 <script src="season.js?v=594c5e3c"></script>
 <script src="news.js?v=138f824a"></script>
-<script src="app.js?v=ac1aa4ce"></script>
+<script src="app.js?v=f003f648"></script>
 <script>
 "use strict";
 const B = window.BOARD;
@@ -2435,6 +2441,9 @@ function calcHtml(p){
 }
 function openCard(id){
   const p = PMAP.get(id); if (!p) return;
+  const dlg = $("card");
+  if (inSeason() && typeof openCardSeason === "function") return openCardSeason(id);   // 25.10.2026: the season's card is built in app.js
+  dlg.classList.remove("sx", "cd2");
   const A = analyze(), taken = takenSet().has(id);
   const parts = p.pl ? CAT.map(([k, n, c]) => [n, c, (p.pl[k] || 0) * (SC[k] || 0)]) : [];
   const toPts = p.pl ? (p.pl.to || 0) * (SC.to || 0) : 0;
