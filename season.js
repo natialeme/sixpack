@@ -467,16 +467,15 @@ function pState(id, Wm, mp, week){
     if (hit && ok) { locked = true; lockedOn = hit.date; }
     else if (hit) { pending = {date: hit.date, fp: pts}; pts = lastFp; }
   }
-  // "נעלתי" (here or on the phone): S.locks[week][player] = the date of the game you locked (true: marked before
-  // 24.10.2026, any game). A press for his latest game counts at once: Sleeper's API shows that lock only after his
-  // next game. One for an earlier game counts only if Sleeper shows it (as the press in week_report.py).
-  const mark = (S.locks && S.locks[week] && S.locks[week][id]) || null;
-  const pressed = !locked && pts != null && mark === lastDate && Math.abs(pts - lastFp) < 0.05;
-  if (pressed) { locked = true; lockedOn = lastDate; }
+  // An explicit date selects that completed game, overriding both conflicting API scores
+  // and automatic lock inference. A date absent from played games cannot create a lock.
+  const mark = S.locks?.[week]?.[id] ?? null;
+  const markedGame = typeof mark === "string" ? played.find(x => x.date === mark) : null;
+  const pressed = !!markedGame;
+  if (pressed) { locked = true; lockedOn = markedGame.date; pts = markedGame.fp; }
+  // Preserve legacy undated marks from before 24.10.2026.
   if (mark === true && !locked) { locked = true; const hit = pts != null && played.find(x => Math.abs(x.fp - pts) < 0.05); if (hit) lockedOn = hit.date; }
-  // a click on the score of an earlier game (the board): he says he locked that one. Sleeper's two copies disagree by turns
-  // and a new browser has no ledger yet, so his word wins (25.10.2026, Edwards: 40.5 from game 1, 21.5 from game 2)
-  if (!locked && typeof mark === "string" && mark !== lastDate) { const mg = played.find(x => x.date === mark); if (mg) { locked = true; lockedOn = mark; pts = mg.fp; } }
+  if (mark === false) { locked = false; lockedOn = null; pts = lastFp; pending = null; }
   if (locked) pending = null;
   const out = isOut(inj);
   const k = out ? 0 : left.length;
@@ -650,19 +649,12 @@ function ackInjuries(ids){
 function toggleLock(id, date){
   const X = seasonState(), w = X && X.myR && X.D.week; if (!w) return;
   const x = [...X.me.st.filter(Boolean), ...X.me.bench, ...X.me.ir].find(y => y.id === id);
+  if (!x) return;
   S.locks = S.locks || {}; S.locks[w] = S.locks[w] || {};
-  // a click on the score of an earlier game of his: that is the game he locked (or, again, not)
-  if (date && x && date !== x.lastDate && x.played.some(g => g.date === date)) {
-    if (x.locked && x.lockedOn === date && !S.locks[w][id]) { toast(`${x.p.n} נעול לפי Sleeper על המשחק מ-${fmtShort(dObj(date))}`); return; }
-    if (S.locks[w][id] === date) delete S.locks[w][id];
-    else { S.locks[w][id] = date; sendLock(`lock|${w}|${id}|${date}`, x.p.n); }
-    save(); refreshAlerts(); rerenderSeason(); return;
-  }
-  if (x && x.locked && !S.locks[w][id]) { toast(`${x.p.n} נעול לפי Sleeper${x.lockedOn ? ` על המשחק מ-${fmtShort(dObj(x.lockedOn))}` : ""}`); return; }
-  if (S.locks[w][id] && (!x || x.locked)) delete S.locks[w][id];
-  else if (x && x.pending) { S.locks[w][id] = x.pending.date; sendLock(`lock|${w}|${id}|${x.pending.date}`, x.p.n); }
-  else if (x && x.lastDate) { S.locks[w][id] = x.lastDate; sendLock(`lock|${w}|${id}|${x.lastDate}`, x.p.n); }
-  else S.locks[w][id] = true;            // no game yet: a mark by hand, as before 24.10.2026
+  const selected = date || (x.locked ? x.lockedOn || x.lastDate : x.pending ? x.pending.date : x.lastDate);
+  if (!selected || !x.played.some(g => g.date === selected)) return;
+  const cancel = (!date && x.locked) || S.locks[w][id] === selected || (x.locked && x.lockedOn === selected);
+  sendLock(`${cancel ? "unlock" : "lock"}|${w}|${id}|${selected}`, x.p.n);
   save(); refreshAlerts(); rerenderSeason();
 }
 function rerenderSeason(){
@@ -680,7 +672,7 @@ function rerenderSeason(){
 // the phone marks the lock within a second, and "נעלתי" here posts the same key, so the phone stops its reminders on the
 // next run. The topic is NTFY_TOPIC from engine/.env, pasted once in the settings (S.ntfyTopic, this browser only):
 // whoever knows it can read the alerts, so it is never in the code. ntfy keeps a message 12 hours and every connect asks
-// for those 12 hours again; S.lockAcks holds the keys already applied, so a lock taken back here stays taken back.
+// for those 12 hours again; versioned lock/unlock events prevent an older replay from undoing a newer action.
 const NTFY = "https://ntfy.sh";
 const LSYNC = {es: null, topic: "", state: "off", tries: 0, timer: null, openAt: 0, sending: false, rr: null, news: []};
 const lockTopic = () => { const t = String(S.ntfyTopic || "").trim(); return /^[-_A-Za-z0-9]{1,60}$/.test(t) ? t : ""; };
@@ -711,28 +703,47 @@ function lockConnect(){
   };
   paintLockSync();
 }
-// a key from the topic (the phone, or this page's own post coming back): the lock goes on that game, a later one wins
-function gotLock(key, at){
-  const m = /^lock\|(\d+)\|(\w+)\|(\d{4}-\d\d-\d\d)$/.exec(key), acks = S.lockAcks || (S.lockAcks = {});
-  if (!m || acks[key]) return;
-  acks[key] = at || Date.now();
-  S.locks = S.locks || {};
-  const [, w, id, date] = m, wk = S.locks[w] = S.locks[w] || {};
-  if (typeof wk[id] !== "string" || wk[id] < date) wk[id] = date;
-  if (at > Date.now() - 120e3) LSYNC.news.push(id);      // pressed just now, not the 12 hours a connect brings back
-  clearTimeout(LSYNC.rr);
-  LSYNC.rr = setTimeout(() => {
-    save(); refreshAlerts(); rerenderSeason();
-    if (LSYNC.news.length) toast(`נעלתי מהטלפון: ${[...new Set(LSYNC.news)].map(i => pOf(i).n).join(", ")}`);
-    LSYNC.news = [];
-  }, 200);
+// Versioned events retain the time of the user's action, including while offline.
+// Legacy phone buttons have four fields and use ntfy's delivery timestamp (seconds).
+function parseLockEvent(key, at = 0){
+  const m = /^(lock|unlock)\|([1-9]\d?)\|(\d{1,20})\|(\d{4}-\d\d-\d\d)(?:\|(\d{13}))?$/.exec(key);
+  if (!m) return null;
+  const [, kind, w, id, date, revision] = m, d = new Date(date + "T00:00:00Z");
+  if (+w > 60 || date.startsWith("0000") || !Number.isFinite(d.getTime()) || d.toISOString().slice(0, 10) !== date) return null;
+  const stamp = revision ? +revision : +at;
+  if (!Number.isFinite(stamp) || stamp < 0) return null;
+  return {kind, w, id, date, at: stamp, key};
 }
-// "נעלתי" here, to the phone: queued in S.lockOut until ntfy takes it (retried on every pull and reconnect)
+function applyLockEvent(ev){
+  S.lockEvents = S.lockEvents || {};
+  const events = S.lockEvents[ev.w] = S.lockEvents[ev.w] || {}, old = events[ev.id];
+  if (old && (old.at > ev.at || (old.at === ev.at && old.key >= ev.key))) return false;
+  const acks = S.lockAcks || (S.lockAcks = {});
+  // Preserve the old client's local cancellation when replaying its already-seen legacy message.
+  if (!old && acks[ev.key] && acks[ev.key] >= ev.at) return false;
+  events[ev.id] = {at: ev.at, key: ev.key}; acks[ev.key] = ev.at;
+  S.locks = S.locks || {}; const wk = S.locks[ev.w] = S.locks[ev.w] || {};
+  wk[ev.id] = ev.kind === "lock" ? ev.date : false;
+  return true;
+}
+function gotLock(key, at){
+  const ev = parseLockEvent(key, at);
+  if (!ev || !ev.at || !applyLockEvent(ev)) return;
+  // Persist immediately: closing the tab during the redraw debounce must not lose a received event.
+  save();
+  clearTimeout(LSYNC.rr);
+  LSYNC.rr = setTimeout(() => { refreshAlerts(); rerenderSeason(); }, 200);
+}
 function sendLock(key, name){
-  (S.lockAcks = S.lockAcks || {})[key] = Date.now();      // its echo from the topic changes nothing
-  S.lockOut = S.lockOut || [];         // queued even with no topic yet: it goes out once one is pasted (24.10.2026)
-  if (!S.lockOut.includes(key)) S.lockOut.push(key);
-  if (!lockTopic()) { toast(`${name} סומן נעול כאן. הטלפון יידע ברגע שתדביק בהגדרות את ערוץ ההתראות`); return; }
+  const ev = parseLockEvent(key); if (!ev) return;
+  const old = S.lockEvents?.[ev.w]?.[ev.id];
+  const at = Math.max(Date.now(), (old?.at || 0) + 1);
+  key = `${ev.kind}|${ev.w}|${ev.id}|${ev.date}|${at}`;
+  applyLockEvent(parseLockEvent(key));
+  // Only the latest unsent intent for this player is useful. An in-flight older post is followed by this one.
+  S.lockOut = (S.lockOut || []).filter(k => { const e = parseLockEvent(k); return e && (e.w !== ev.w || e.id !== ev.id); });
+  S.lockOut.push(key); save();
+  if (!lockTopic()) { toast(`${name}: הסימון עודכן כאן. הסנכרון יושלם אחרי חיבור ערוץ ההתראות בהגדרות`); return; }
   flushLocks(name);
 }
 async function flushLocks(name){
@@ -740,16 +751,25 @@ async function flushLocks(name){
   if (LSYNC.sending || !t || !(S.lockOut || []).length) return;
   LSYNC.sending = true;
   let failed = false;
-  for (const key of [...S.lockOut]) {
-    try {
-      const r = await fetch(`${NTFY}/${t}-ack`, {method: "POST", body: key, credentials: "omit"});
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      S.lockOut = S.lockOut.filter(k => k !== key);
-    } catch (e) { failed = true; break; }
-  }
-  LSYNC.sending = false;
-  save();
-  if (name) toast(failed ? `${name} סומן נעול כאן, אבל ntfy לא ענה. אנסה שוב לבד בעדכון הבא` : `${name} סומן נעול, והטלפון יפסיק להזכיר`);
+  try {
+    while ((S.lockOut || []).length && lockTopic() === t) {
+      const key = S.lockOut[0], ev = parseLockEvent(key);
+      const current = ev && S.lockEvents?.[ev.w]?.[ev.id];
+      if (!ev || (!ev.at && S.locks?.[ev.w]?.[ev.id] !== ev.date) ||
+          (ev.at && current && (current.at > ev.at || (current.at === ev.at && current.key > key)))) {
+        S.lockOut.shift(); continue;
+      }
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      try {
+        const r = await fetch(`${NTFY}/${t}-ack`, {method: "POST", body: key, credentials: "omit", signal: controller.signal});
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        S.lockOut = S.lockOut.filter(k => k !== key);
+      } catch (e) { failed = true; break; }
+      finally { clearTimeout(timeout); }
+    }
+  } finally { LSYNC.sending = false; save(); }
+  if (name) toast(failed || S.lockOut.length ? `${name}: הסימון נשמר כאן וממתין לסנכרון. אנסה שוב בעדכון הבא` : `${name}: הסימון סונכרן לטלפון`);
 }
 function lockSyncChip(){
   const st = LSYNC.topic ? LSYNC.state : "off";

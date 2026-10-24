@@ -290,8 +290,8 @@ function renderWeek(){
     const opp = `${g.home ? "" : "@"}${g.opp}`;
     if (g.done && g.fp != null) {
       const cls = x.lockedOn === d ? "k" : (x.pending && x.pending.date === d) || (!x.locked && d !== x.lastDate && x.uncertain && x.uncertain.some(v => Math.abs(v - g.fp) < 0.05)) ? "pk" : countedOn(x) === d && !x.locked ? (stIds.has(x.id) ? "av" : "bn") : "";
-      // an earlier game of a starter: a click says "I locked this one" (the latest game has the button)
-      if (stIds.has(x.id) && x.played.length >= 2 && d !== x.lastDate)
+      // Every scored game is selectable, including the latest when an earlier API score is pending.
+      if (stIds.has(x.id) && x.played.length >= 1)
         return `<td class="${td}"><button type="button" class="sc ${cls} pick" onclick="toggleLock('${x.id}','${d}')" title="${x.lockedOn === d ? `נעול על המשחק הזה (${esc(opp)}). לחיצה מבטלת` : `${esc(opp)} · ${cls === "pk" ? "Sleeper החזיר את הציון הזה. " : ""}לחיצה: נעלתי על המשחק הזה`}">${f1(g.fp)}</button></td>`;
       return `<td class="${td}"><span class="sc ${cls}" title="${esc(opp)}">${f1(g.fp)}</span></td>`;
     }
