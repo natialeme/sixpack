@@ -347,20 +347,26 @@ async function cardHistory(p, season){
 // game. A counted score can only really change when he plays again, so every pull reads the matchups MATCHUP_READS
 // times, and LOCKS_KEY keeps every counted score seen per player since his latest game, per week (the last two weeks).
 // Two values since his latest game = "uncertain" (pState): not locked, his latest game counts, until his next game.
+// One value is not proof either (24.10.2026 20:35, 24 reads: Kessler 22.75, his 21.10 game, in 20 and 37.0 in 4): a lock
+// read off the API counts once CONFIRM_READS reads over CONFIRM_MS agree, or "נעלתי" was pressed for that game. Until
+// then he is not locked, the safer advice: a new phone had shown Kawhi and Sabonis locked (98.0 instead of 40.5).
 // The engine keeps its own copy (engine/data/locks.json): the browser can't read it, so each side learns on its own.
 const MATCHUP_READS = 4;                    // reads of the matchups per pull, 1 second apart
-const LOCKS_KEY = "sixpack-locks-seen";     // {league: {week: {player: {date: his latest game, vals: [scores read]}}}}
+const FIRST_READS = 12;                     // the first pull of a page load, 0.35 seconds apart: a new device learns fast
+const CONFIRM_READS = 16, CONFIRM_MS = 30 * 60e3;   // the ledger keeps counting across visits, so a phone opened now and then gets there too
+const LOCKS_KEY = "sixpack-locks-seen";     // {league: {week: {player: {date: his latest game, vals: [scores read], n: reads, since}}}}
 function seenLedger(){
   if (!SEA.seen) { try { SEA.seen = (JSON.parse(localStorage.getItem(LOCKS_KEY)) || {})[LIVE_LEAGUE] || {}; } catch (e) { SEA.seen = {}; } }
   return SEA.seen;
 }
-// {player: Set of counted scores} over this pull's reads; the first read is the one the screens show
+// {player: [his counted score in every read]} over this pull's reads; the first read is the one the screens show
 async function readMatchups(lid, week, first){
-  const reads = {};
-  const add = d => (d || []).forEach(m => Object.entries(m.players_points || {}).forEach(([id, v]) => { if (v != null) (reads[id] = reads[id] || new Set()).add(Math.round(v * 100) / 100); }));
+  const reads = {}, n = SEA.readOnce ? MATCHUP_READS : FIRST_READS, gap = SEA.readOnce ? 1000 : 350;
+  SEA.readOnce = true;
+  const add = d => (d || []).forEach(m => Object.entries(m.players_points || {}).forEach(([id, v]) => { if (v != null) (reads[id] = reads[id] || []).push(Math.round(v * 100) / 100); }));
   add(first);
-  for (let i = 1; i < MATCHUP_READS && !ASOF; i++) {
-    await new Promise(r => setTimeout(r, 1000));
+  for (let i = 1; i < n && !ASOF; i++) {
+    await new Promise(r => setTimeout(r, gap));
     try { add(await getJSON(`${API}/league/${lid}/matchups/${week}`)); } catch (e) {}
   }
   return reads;
@@ -376,8 +382,12 @@ function noteReads(D, reads){
     const on = x => x.live || (x.date === Wm.today && ms[x.date] == null && (t => t && (t.state !== "pre" || t.t <= now))(tipOf(team, x.date)));
     if (!played.length || g.some(on)) return;
     const date = played[played.length - 1].date;
-    if (!LW[id] || LW[id].date !== date) LW[id] = {date, vals: []};
-    LW[id].vals = [...new Set([...LW[id].vals, ...vals])].sort((a, b) => a - b);
+    // a record without n is from before 24.10 evening: on a new device it may be one read, so it starts counting again
+    if (!LW[id] || LW[id].date !== date) LW[id] = {date, vals: [], n: 0, since: now};
+    const r = LW[id];
+    r.vals = [...new Set([...r.vals, ...vals])].sort((a, b) => a - b);
+    r.n = (r.n || 0) + vals.length;
+    if (!r.since || r.n === vals.length) r.since = now;
   });
   SEA.seen = Object.fromEntries(Object.keys(L).sort((a, b) => a - b).slice(-2).map(w => [w, L[w]]));
   let all = {};
@@ -434,11 +444,17 @@ function pState(id, Wm, mp, week){
   const seen = lastDate && !ASOF && !g.some(x => x.live) ? (seenLedger()[week] || {})[id] : null;
   const uncertain = seen && seen.date === lastDate && seen.vals.length > 1 ? seen.vals : null;
   if (uncertain) pts = lastFp;
-  // a counted score that matches an earlier game (not the latest) can only be a lock
-  let locked = false, lockedOn = null;
+  // a counted score that matches an earlier game (not the latest) is a lock, once the ledger agrees (CONFIRM_READS)
+  // or "נעלתי" was pressed for that game. Read from the ledger even during his game: it holds the reads from before.
+  let locked = false, lockedOn = null, pending = false;
+  const mark0 = (S.locks && S.locks[week] && S.locks[week][id]) || null;
   if (pts != null && played.length >= 2 && Math.abs(pts - lastFp) > 0.05) {
     const hit = played.slice(0, -1).find(x => Math.abs(x.fp - pts) < 0.05);
-    if (hit) { locked = true; lockedOn = hit.date; }
+    const rec = lastDate && !ASOF ? (seenLedger()[week] || {})[id] : null;
+    const ok = ASOF || (hit && mark0 === hit.date) || (rec && rec.date === lastDate && rec.vals.length === 1 && Math.abs(rec.vals[0] - pts) < 0.05
+      && (rec.n || 0) >= CONFIRM_READS && Date.now() - rec.since >= CONFIRM_MS);
+    if (hit && ok) { locked = true; lockedOn = hit.date; }
+    else if (hit) { pending = true; pts = lastFp; }
   }
   // "נעלתי" (here or on the phone): S.locks[week][player] = the date of the game you locked (true: marked before
   // 24.10.2026, any game). A press for his latest game counts at once: Sleeper's API shows that lock only after his
@@ -462,7 +478,7 @@ function pState(id, Wm, mp, week){
   const wkMin = mean((Wm.pj[id] || []).map(x => x.min));
   // thr: lock the latest game if it beats this (decision now). thrNext: the bar after his next game
   const thr = lastFp != null && left.length ? V[left.length] : null, thrNext = left.length >= 2 ? V[left.length - 1] : null;
-  return {id, p, team, inj, g, played, left, k, m, sd, fpg, gp: games.length, minutes, V, lastFp, lastDate, pts, locked, lockedOn, mark, pressed, uncertain, exp, sdW, act, thr, thrNext,
+  return {id, p, team, inj, g, played, left, k, m, sd, fpg, gp: games.length, minutes, V, lastFp, lastDate, pts, locked, lockedOn, mark, pressed, uncertain, pending, exp, sdW, act, thr, thrNext,
     today: g.find(x => x.today && !x.done) || null, wkMin, nextGames: (Wm.pjN[id] || []).length};
 }
 
@@ -689,9 +705,9 @@ function gotLock(key, at){
 // "נעלתי" here, to the phone: queued in S.lockOut until ntfy takes it (retried on every pull and reconnect)
 function sendLock(key, name){
   (S.lockAcks = S.lockAcks || {})[key] = Date.now();      // its echo from the topic changes nothing
-  if (!lockTopic()) { toast(`${name} סומן נעול כאן. כדי שגם הטלפון יידע, מדביקים בהגדרות את ערוץ ההתראות`); return; }
-  S.lockOut = S.lockOut || [];
+  S.lockOut = S.lockOut || [];         // queued even with no topic yet: it goes out once one is pasted (24.10.2026)
   if (!S.lockOut.includes(key)) S.lockOut.push(key);
+  if (!lockTopic()) { toast(`${name} סומן נעול כאן. הטלפון יידע ברגע שתדביק בהגדרות את ערוץ ההתראות`); return; }
   flushLocks(name);
 }
 async function flushLocks(name){
