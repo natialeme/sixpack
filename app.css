@@ -996,3 +996,11 @@ body.app2 #card.cd2::backdrop{background:#000000a6}
 /* a phone: the quarter-by-quarter table in "המאץ'" was 16px wider than its block */
 @media (max-width:560px){.sx .qt td:first-child,.sx .qt th:first-child{width:80px;white-space:nowrap}.sx .qt td,.sx .qt th{padding-inline:3px}}
 @media (max-width:560px){.sx .qt td:first-child,.sx .qt th:first-child{padding-inline-start:12px}.sx .qt td:last-child,.sx .qt th:last-child{padding-inline-end:12px}}
+/* the phone's summary tab: the weeks' games joined it, so the mini chart and the gaps are tighter to keep it on one screen */
+@media (max-width:820px){
+  #card.cd2 .cd-sumwrap{gap:8px;padding:10px 16px}
+  #card.cd2 .cd-mini{height:92px;min-height:92px;flex:none}
+  #card.cd2 .cd-hero{padding-top:8px}
+  #card.cd2 .cd-hv .n{font-size:54px}
+  #card.cd2 .cd-wk div{padding:5px 8px}
+}
