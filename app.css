@@ -768,78 +768,137 @@ body.app2 #settings[open]{max-height:calc(100dvh - 32px)}
 .sx .hot-row .val{font-size:52px}
 
 /* the best swap: 200 + text + 190 */
-.sx[data-tab="fa"] .swap .g{grid-template-columns:200px 1fr 190px}
-.sx[data-tab="fa"] .swap .out .pf{margin:0 auto 4px}
 
-/* ---- the card ---- */
-body.app2 #card.cd2{position:fixed;inset:0;margin:auto;width:min(1140px,calc(100vw - 32px));max-width:none;height:fit-content;max-height:calc(100dvh - 32px);min-height:0;padding:0;overflow:hidden;background:var(--s1);color:var(--tx);border:1px solid #3a3a42;border-radius:12px;box-shadow:0 24px 60px #000c;font:400 13px/1.4 Heebo,system-ui,sans-serif}
+/* ---- the settings: two columns, so the window fits the screen without scrolling ---- */
+body.app2 #settings{width:min(920px,calc(100vw - 32px))}
+#settings .cols{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--ln)}
+#settings .cols > div + div{border-inline-start:1px solid var(--ln)}
+#settings .cols .sec:last-child{border-bottom:0}
+@media (max-width:820px){#settings .cols{display:block}#settings .cols > div + div{border-inline-start:0}#settings .cols .sec:last-child{border-bottom:1px solid var(--ln)}}
+
+/* ---------- the best swap, tidied (25.10.2026 evening): top = photo, name, numbers; band = gain + the player to release + numbers ---------- */
+.sx[data-tab="fa"] .swap .sw-top{display:flex;gap:20px;align-items:stretch}
+.sx[data-tab="fa"] .swap .sw-top .who{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between;gap:10px}
+.sx[data-tab="fa"] .swap .sw-band{display:flex;align-items:center;gap:18px;margin-top:14px;padding:12px 16px;border-radius:10px;background:#ffffff0a;box-shadow:inset 0 0 0 1px #ffffff14}
+.sx[data-tab="fa"] .swap .sw-band .gain{flex:none;min-width:118px;align-items:flex-start;justify-content:flex-start;text-align:start;border:0;padding:0;gap:2px}
+.sx[data-tab="fa"] .swap .sw-band .out{flex:1;min-width:0;display:flex;flex-direction:row;align-items:center;gap:12px}
+.sx[data-tab="fa"] .swap .sw-band .out .pf{margin:0}
+.sx[data-tab="fa"] .swap .sw-band .out .ot{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0}
+.sx[data-tab="fa"] .swap .sw-band .out small{font-size:11.5px;color:#ffffffb0}
+.sx[data-tab="fa"] .swap .sw-band .strip{flex:0 0 232px}
+.sx[data-tab="fa"] .swap .acts{margin-top:12px}
+@media (max-width:560px){
+  .sx[data-tab="fa"] .swap .sw-top{gap:12px}
+  .sx[data-tab="fa"] .swap .sw-top > .pf{width:128px !important;height:150px !important}
+  .sx[data-tab="fa"] .swap .name{font-size:34px}
+  .sx[data-tab="fa"] .swap .sw-band{flex-wrap:wrap;gap:12px}
+  .sx[data-tab="fa"] .swap .sw-band .strip{flex:1 1 100%}
+}
+
+/* ---------- the player card (rebuilt 25.10.2026 evening): a dark band, a paper body, a paper footer ---------- */
+/* --ac is the accent: lime for a free agent, orange for your own player, white for another team's */
+body.app2 #card.cd2{position:fixed;inset:0;margin:auto;width:min(1140px,calc(100vw - 32px));max-width:none;height:fit-content;max-height:calc(100dvh - 32px);min-height:0;padding:0;overflow:hidden;background:var(--s1);color:var(--tx);border:1px solid #3a3a42;border-radius:12px;box-shadow:0 24px 60px #000c;font:400 13px/1.4 Heebo,system-ui,sans-serif;--ac:var(--tx)}
+body.app2 #card.cd2[data-who="fa"]{--ac:var(--now)}
+body.app2 #card.cd2[data-who="mine"]{--ac:var(--me-hi)}
 body.app2 #card.cd2[open]{display:flex;flex-direction:column}
 body.app2 #card.cd2::backdrop{background:#000000a6}
+#card.cd2:focus,#card.cd2:focus-visible{outline:0}
 #card.cd2 > .x{display:none}
-#card.cd2 .cd-h{display:flex;align-items:center;gap:20px;padding:16px 22px;border-bottom:1px solid var(--ln)}
+#card.cd2 #cardBody{display:flex;flex-direction:column;flex:1;min-height:0}
+#card.cd2 .paper{box-shadow:none;border:0}
+/* the band: photo and name, the hero number, six numbers in 3 x 2 */
+#card.cd2 .cd-top{position:relative;display:flex;align-items:stretch;flex:none;border-bottom:1px solid var(--ln);background:linear-gradient(to left,color-mix(in srgb,var(--ac) 13%,transparent),transparent 62%)}
+#card.cd2 .cd-h{display:flex;align-items:center;gap:18px;padding:16px 22px;flex:0 0 372px;min-width:0}
+#card.cd2 .cd-h .pf{border-color:color-mix(in srgb,var(--ac) 55%,#3a3a42)}
 #card.cd2 .cd-t{min-width:0;flex:1}
 #card.cd2 .cd-nm{display:flex;align-items:baseline;gap:12px;font-size:28px;font-weight:800;line-height:1.1}
-#card.cd2 .cd-vmini{display:none;font-size:20px;color:var(--tx2)}
-#card.cd2 .cd-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;color:var(--tx2);font-size:13px;margin-top:6px}
+#card.cd2 .cd-vmini{display:none;font-size:20px;color:var(--ac)}
+#card.cd2 .cd-meta{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;color:var(--tx2);font-size:13px;margin-top:6px}
 #card.cd2 .cd-meta .tl{width:18px;height:18px}
 #card.cd2 .cd-meta .pos{font-weight:700;color:var(--tx)}
 #card.cd2 .cd-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 #card.cd2 .chip{display:inline-block;font-size:11px;font-weight:600;color:var(--tx2);border:1px solid var(--ln);border-radius:5px;padding:0 7px;line-height:19px;white-space:nowrap}
+#card.cd2 .chip.fa{color:var(--now);border-color:#c6f43255;background:#c6f43212}
+#card.cd2 .chip.me{color:var(--me-hi);border-color:#f07a4566;background:#d9592618}
 #card.cd2 .chip.red{color:var(--bad-tx);border-color:#f8717155}
 #card.cd2 .chip.amb{color:var(--warn-tx);border-color:#f5a52455}
-#card.cd2 .cd-x{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--tx2);align-self:flex-start;flex:none}
+#card.cd2 .cd-x{position:absolute;top:12px;inset-inline-end:12px;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--tx2)}
 #card.cd2 .cd-x:hover{background:var(--s3);color:var(--tx)}
 #card.cd2 .cd-x svg{width:16px;height:16px}
-#card.cd2 .cd-tabs{display:none}
-#card.cd2 .cd-hero{display:flex;align-items:stretch;border-bottom:1px solid var(--ln)}
-#card.cd2 .cd-hv{padding:14px 30px 14px 26px;min-width:260px;border-inline-end:1px solid var(--ln)}
+#card.cd2 .cd-hero{flex:1;display:flex;align-items:stretch;min-width:0;padding-inline-end:46px}
+#card.cd2 .cd-hv{display:flex;flex-direction:column;justify-content:center;flex:none;min-width:190px;padding:10px 22px;border-inline-start:1px solid var(--ln);border-inline-end:1px solid var(--ln)}
 #card.cd2 .cd-hv small{display:block;color:var(--tx3);font-size:11.5px;font-weight:600}
-#card.cd2 .cd-hv .n{display:block;font-size:68px;font-weight:700;line-height:.95;margin:2px 0}
-#card.cd2 .cd-hv .gap{color:var(--tx2);font-size:12px;min-height:17px}
-#card.cd2 .cd-strip{flex:1;display:grid;grid-auto-flow:column;grid-auto-columns:1fr}
-#card.cd2 .cd-strip div{display:flex;flex-direction:column;justify-content:center;padding:8px 10px;border-inline-start:1px solid var(--ln);text-align:center}
-#card.cd2 .cd-strip div:first-child{border-inline-start:0}
+#card.cd2 .cd-hv .n{display:block;font-size:68px;font-weight:700;line-height:.95;margin:2px 0;color:var(--ac)}
+#card.cd2 .cd-hv .gap{font-size:12px;color:var(--tx2);min-height:17px}
+#card.cd2 .cd-hv .gap.gup{color:var(--good-tx)}
+#card.cd2 .cd-hv .gap.gdn{color:var(--bad-tx)}
+#card.cd2 .cd-strip{flex:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:1fr 1fr;min-width:0}
+#card.cd2 .cd-strip div{display:flex;flex-direction:column;justify-content:center;padding:6px 16px;border-inline-start:1px solid var(--ln);border-top:1px solid var(--ln)}
+#card.cd2 .cd-strip div:nth-child(-n+3){border-top:0}
+#card.cd2 .cd-strip div:nth-child(3n+1){border-inline-start:0}
 #card.cd2 .cd-strip small{display:block;color:var(--tx3);font-size:10.5px;font-weight:600}
 #card.cd2 .cd-strip .n{font-size:26px;font-weight:700;line-height:1.05}
 #card.cd2 .cd-strip em{font-style:normal;color:var(--tx3);font-size:10.5px}
-#card.cd2 .cd-sumwrap{display:none}
+#card.cd2 .n.good,#card.cd2 .cd-sum .n.good{color:var(--good-tx)}
+#card.cd2 .n.amb{color:var(--warn-tx)}
+#card.cd2 .n.bad{color:var(--bad-tx)}
+#card.cd2 .cd-tabs,#card.cd2 .cd-sumwrap{display:none}
+/* the paper body: games on the right, the forecast on the left */
 #card.cd2 .cd-body{display:grid;grid-template-columns:1.4fr 1fr;grid-template-rows:minmax(0,1fr);flex:1;min-height:0;overflow:hidden}
-#card.cd2 .cd-c{padding:14px 22px 12px;min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px;overflow:auto}
+#card.cd2 .cd-c{padding:16px 22px 14px;min-width:0;min-height:0;display:flex;flex-direction:column;gap:12px;overflow:auto}
 #card.cd2 .cd-c + .cd-c{border-inline-start:1px solid var(--ln)}
-#card.cd2 #cdHist{display:flex;flex-direction:column;gap:10px;min-height:0}
-#card.cd2 h6{margin:0;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:8px}
+#card.cd2 #cdHist{display:flex;flex-direction:column;gap:12px;min-height:0;flex:1}
+#card.cd2 h6{margin:0;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:8px;color:var(--tx)}
 #card.cd2 h6 span{color:var(--tx3);font-weight:500;font-size:11px}
 #card.cd2 h6 .sp{flex:1}
 #card.cd2 .seg{display:inline-flex;background:var(--s3);border-radius:7px;padding:2px;gap:2px}
 #card.cd2 .seg button{font-size:11.5px;font-weight:600;color:var(--tx2);padding:2px 10px;border-radius:5px}
-#card.cd2 .seg button.on{background:var(--s4);color:var(--tx)}
-#card.cd2 .cd-chart{position:relative;height:150px;flex:none;border-bottom:1px solid var(--ln)}
+#card.cd2 .seg button.on{background:var(--s1);color:var(--tx);box-shadow:0 1px 2px #0002}
+#card.cd2 .dim{color:var(--tx3)}
+#card.cd2 .note{margin:0;font-size:11px;color:var(--tx3)}
+/* this week's games */
+#card.cd2 .cd-wk{display:flex;gap:8px}
+#card.cd2 .cd-wk div{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:7px 10px;border-radius:8px;background:var(--s2);border:1px solid var(--ln);font-size:12px}
+#card.cd2 .cd-wk div.td{background:var(--today);border-color:#c6f432}
+#card.cd2 .cd-wk small{color:var(--tx3);font-size:10.5px;font-weight:600}
+#card.cd2 .cd-wk span{font-weight:700}
+#card.cd2 .cd-wk b{font:700 18px/1.1 "Barlow Condensed",Heebo,sans-serif}
+#card.cd2 .cd-wk b.hi{color:var(--good-tx)}
+#card.cd2 .cd-wk b.lo{color:var(--bad-tx)}
+#card.cd2 .cd-wk b.lv{color:var(--me-tx);font:700 13px Heebo}
+#card.cd2 .cd-wk span.dim{font-weight:500}
+/* the history */
+#card.cd2 .cd-chart{position:relative;height:150px;flex:1 1 150px;min-height:116px;border-bottom:1px solid var(--ln)}
 #card.cd2 .cd-bars{position:absolute;inset:6px 0 22px;display:flex;align-items:flex-end;justify-content:center;gap:var(--g,24px)}
-#card.cd2 .cd-bars i{display:block;flex:0 1 54px;min-width:5px;border-radius:5px 5px 0 0;background:#4d4d56}
-#card.cd2 .cd-bars i.top{background:#8b8b95}
-#card.cd2 .cd-ref{position:absolute;inset-inline:0;border-top:1.5px dashed #8b8b95;pointer-events:none}
+#card.cd2 .cd-bars i{display:block;flex:0 1 54px;min-width:5px;border-radius:5px 5px 0 0;background:var(--s4)}
+#card.cd2 .cd-bars i.up{background:var(--me)}
+#card.cd2 .cd-bars i.top{background:var(--me-tx)}
+#card.cd2 .cd-ref{position:absolute;inset-inline:0;border-top:1.5px dashed var(--tx2);pointer-events:none}
 #card.cd2 .cd-ref span{position:absolute;inset-inline-start:0;top:-17px;font-size:10.5px;color:var(--tx3);font-weight:400}
 #card.cd2 .cd-ax{position:absolute;inset-inline:0;bottom:2px;display:flex;justify-content:space-between;font-size:10.5px;color:var(--tx3)}
-#card.cd2 .cd-sum{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--ln);border-radius:8px;overflow:hidden;flex:none}
+#card.cd2 .cd-sum{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--ln);border-radius:8px;overflow:hidden;flex:none;background:var(--s2)}
 #card.cd2 .cd-sum div{padding:5px 8px;text-align:center;border-inline-start:1px solid var(--ln)}
 #card.cd2 .cd-sum div:first-child{border-inline-start:0}
 #card.cd2 .cd-sum small{display:block;color:var(--tx3);font-size:10px;font-weight:600}
 #card.cd2 .cd-sum .n{font-size:20px;font-weight:700;line-height:1.05}
-#card.cd2 .cd-log{min-height:0;max-height:214px;overflow:auto}
+#card.cd2 .cd-log{min-height:0;flex:none}
 #card.cd2 .cd-t{width:100%;border-collapse:collapse;font-size:12px}
-#card.cd2 .cd-t th{position:sticky;top:0;background:var(--s1);color:var(--tx3);font-weight:600;font-size:10.5px;padding:5px 6px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--ln)}
+#card.cd2 .cd-t th{position:sticky;top:0;background:var(--s2);color:var(--tx3);font-weight:600;font-size:10.5px;padding:5px 6px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--ln)}
 #card.cd2 .cd-t td{padding:0 6px;height:30px;border-bottom:1px solid var(--ln2);white-space:nowrap}
 #card.cd2 .cd-t .num{text-align:center}
 #card.cd2 .cd-t td.num{font:600 14px "Barlow Condensed",Heebo,sans-serif;font-variant-numeric:tabular-nums}
-#card.cd2 .cd-t td.num b{font-weight:700}
-#card.cd2 .cd-t td.dim,#card.cd2 .dim{color:var(--tx3)}
-#card.cd2 .note{margin:0;font-size:11px;color:var(--tx3)}
-#card.cd2 .cd-skel{height:150px;border-radius:8px;background:repeating-linear-gradient(135deg,#25252b 0 6px,#212126 6px 12px)}
-#card.cd2 .cd-bd{display:grid;grid-template-columns:62px 1fr 40px;align-items:center;gap:8px;height:23px;font-size:12px}
-#card.cd2 .cd-bd .bar{display:block;height:7px;border-radius:4px;background:var(--s3);overflow:hidden}
-#card.cd2 .cd-bd .bar i{display:block;height:100%;background:var(--tx2);border-radius:4px}
-#card.cd2 .cd-bd:first-child .bar i{background:var(--tx)}
+#card.cd2 .cd-t td.sc2 b{font-weight:700;color:var(--tx2)}
+#card.cd2 .cd-t td.sc2.hi b{color:var(--good-tx)}
+#card.cd2 .cd-t td.sc2.lo b{color:var(--bad-tx)}
+#card.cd2 .cd-t td.dim{color:var(--tx3)}
+#card.cd2 .cd-skel{height:150px;border-radius:8px;background:repeating-linear-gradient(135deg,var(--s2) 0 6px,var(--s3) 6px 12px)}
+/* the forecast */
+#card.cd2 .cd-bd{display:grid;grid-template-columns:62px 1fr 40px;align-items:center;gap:8px;height:24px;font-size:12px}
+#card.cd2 .cd-bd .bar{display:block;height:8px;border-radius:4px;background:var(--s3);overflow:hidden}
+#card.cd2 .cd-bd .bar i{display:block;height:100%;background:var(--me);border-radius:4px}
+#card.cd2 .cd-bd.neg .bar i{background:var(--bad-tx)}
 #card.cd2 .cd-bd .v{font:600 13px "Barlow Condensed",Heebo,sans-serif;text-align:left;direction:ltr}
+#card.cd2 .cd-bd.neg .v{color:var(--bad-tx)}
 #card.cd2 .calc{border-top:1px solid var(--ln2)}
 #card.cd2 .calc summary{display:flex;align-items:center;gap:8px;height:34px;color:var(--tx2);font-size:12.5px;cursor:pointer;list-style:none}
 #card.cd2 .calc summary::-webkit-details-marker{display:none}
@@ -850,41 +909,55 @@ body.app2 #card.cd2::backdrop{background:#000000a6}
 #card.cd2 .calc li span{color:var(--tx2)}
 #card.cd2 .calc li b{font:600 13px "Barlow Condensed",Heebo,sans-serif;text-align:left}
 #card.cd2 .calc li em{font-style:normal;color:var(--tx3);font-size:11px}
-#card.cd2 .calc li.tot b{color:var(--tx)}
-#card.cd2 .cd-f{display:flex;align-items:center;gap:8px;padding:12px 22px;border-top:1px solid var(--ln)}
+#card.cd2 .calc li.tot b{color:var(--me-tx)}
+/* the footer */
+#card.cd2 .cd-f{display:flex;align-items:center;gap:8px;padding:12px 22px;flex:none;border-top:1px solid var(--ln)}
 #card.cd2 .cd-f .sp{flex:1}
-#card.cd2 .cd-f .btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 14px;border-radius:7px;font-size:12px;font-weight:700;text-decoration:none;background:var(--s3);color:var(--tx)}
-#card.cd2 .cd-f .btn.w{background:#fff;color:#17171b}
+#card.cd2 .cd-f .btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 16px;border-radius:7px;font-size:12px;font-weight:700;text-decoration:none;background:var(--s3);color:var(--tx)}
+#card.cd2 .cd-f .btn.lime{background:var(--now);color:var(--now-ink)}
 #card.cd2 .cd-f .btn.lt{background:none;box-shadow:inset 0 0 0 1px var(--ln);color:var(--tx2)}
 #card.cd2 .cd-f .btn svg{width:14px;height:14px}
+/* a laptop screen under 800 pixels tall: the same card, a little tighter */
+@media (max-height:800px) and (min-width:821px){
+  #card.cd2 .cd-h{padding:10px 22px}
+  #card.cd2 .cd-h .pf{width:88px !important;height:88px !important}
+  #card.cd2 .cd-nm{font-size:24px}
+  #card.cd2 .cd-hv .n{font-size:56px}
+  #card.cd2 .cd-chart{height:116px}
+  #card.cd2 .cd-c{padding-block:10px 8px;gap:8px}
+  #card.cd2 .cd-bd{height:21px}
+}
 
 /* a phone: three tabs, the actions fixed at the bottom */
 @media (max-width:820px){
   body.app2 #card.cd2{width:100vw;height:100dvh;max-height:none;border:0;border-radius:0}
-  #card.cd2 .cd-h{padding:12px 16px;gap:14px}
+  #card.cd2 .cd-top{display:contents}
+  #card.cd2 .cd-h{order:1;flex:none;padding:12px 16px;gap:14px;background:linear-gradient(to left,color-mix(in srgb,var(--ac) 13%,transparent),transparent 70%);border-bottom:1px solid var(--ln)}
   #card.cd2 .cd-h .pf{width:92px !important;height:92px !important}
+  #card.cd2 .cd-x{inset-inline-end:10px;top:10px}
   #card.cd2 .cd-nm{font-size:21px}
   #card.cd2 .cd-meta{font-size:12px;margin-top:3px}
-  #card.cd2 .cd-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin:10px 16px 0;background:var(--s3);border-radius:8px;padding:2px}
+  #card.cd2 .cd-tabs{order:2;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin:10px 16px 0;background:var(--s3);border-radius:8px;padding:2px}
   #card.cd2 .cd-tabs button{font-size:12.5px;font-weight:700;color:var(--tx2);padding:7px 0;border-radius:6px}
   #card.cd2 .cd-tabs button.on{background:#3a3a42;color:var(--tx)}
-  #card.cd2 .cd-hero{display:block;border-bottom:0;padding:12px 16px 0}
+  #card.cd2 .cd-hero{order:3;display:block;padding:12px 16px 0}
   #card.cd2 .cd-hv{border:0;padding:0;min-width:0}
   #card.cd2 .cd-hv .n{font-size:60px}
-  #card.cd2 .cd-strip{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-flow:row;border:1px solid var(--ln);border-radius:8px;overflow:hidden;margin-top:10px}
-  #card.cd2 .cd-strip div{border-inline-start:1px solid var(--ln);border-top:1px solid var(--ln);padding:7px 10px;align-items:flex-start;text-align:start}
-  #card.cd2 .cd-strip div:nth-child(-n+3){border-top:0}
-  #card.cd2 .cd-strip div:nth-child(3n+1){border-inline-start:0}
+  #card.cd2 .cd-strip{grid-template-rows:auto;border:1px solid var(--ln);border-radius:8px;overflow:hidden;margin-top:10px}
+  #card.cd2 .cd-strip div{padding:7px 10px}
   #card.cd2 .cd-strip .n{font-size:21px}
-  #card.cd2 .cd-body{display:block;overflow:auto}
-  #card.cd2 .cd-c{padding:12px 16px;overflow:visible}
-  #card.cd2 .cd-c + .cd-c{border-inline-start:0}
-  #card.cd2 .cd-sumwrap{flex:1;min-height:0;overflow:auto;padding:10px 16px 12px;flex-direction:column;gap:10px}
+  #card.cd2 .cd-sumwrap{order:4;flex:1;min-height:0;overflow:auto;padding:12px 16px;flex-direction:column;gap:10px}
+  #card.cd2 .cd-sumwrap h6{color:var(--tx)}
+  #card.cd2 .cd-sumwrap .cd-wk div{background:var(--s2)}
   #card.cd2 .cd-sum3{margin:0}
-  #card.cd2 .cd-mini{height:128px;border:1px solid var(--ln);border-radius:8px;border-bottom-width:1px}
+  #card.cd2 .cd-mini{height:128px;border:1px solid var(--ln);border-radius:8px}
+  #card.cd2 .cd-body{order:5;display:block;overflow:auto}
+  #card.cd2 .cd-f{order:6;padding:10px 16px}
+  #card.cd2 .cd-c{padding:12px 16px;overflow:visible}
+  #card.cd2 .cd-chart{flex:none;height:180px}
+  #card.cd2 .cd-c + .cd-c{border-inline-start:0}
+  #card.cd2 .cd-wkd{display:none}
   #card.cd2 .hide-sm{display:none}
-  #card.cd2 .cd-log{max-height:none}
-  #card.cd2 .cd-f{padding:10px 16px}
   /* which pane shows */
   #card.cd2[data-tab="sum"] .cd-body{display:none}
   #card.cd2[data-tab="sum"] .cd-sumwrap{display:flex}
@@ -900,38 +973,26 @@ body.app2 #card.cd2::backdrop{background:#000000a6}
   #card.cd2[data-tab="games"] .cd-vmini,#card.cd2[data-tab="proj"] .cd-vmini{display:inline}
   #card.cd2 .calc li{grid-template-columns:110px 56px 1fr}
 }
+/* the phone's summary tab sits on the dark background, so its chart takes the dark tokens' colours */
+#card.cd2 .cd-sumwrap .cd-bars i{background:var(--s4)}
+#card.cd2 .cd-sumwrap .cd-bars i.up{background:var(--me)}
+#card.cd2 .cd-sumwrap .cd-bars i.top{background:var(--me-hi)}
+#card.cd2 .cd-sumwrap .cd-ref{border-top-color:var(--tx2)}
 
-/* ---- the settings: two columns, so the window fits the screen without scrolling ---- */
-body.app2 #settings{width:min(920px,calc(100vw - 32px))}
-#settings .cols{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--ln)}
-#settings .cols > div + div{border-inline-start:1px solid var(--ln)}
-#settings .cols .sec:last-child{border-bottom:0}
-@media (max-width:820px){#settings .cols{display:block}#settings .cols > div + div{border-inline-start:0}#settings .cols .sec:last-child{border-bottom:1px solid var(--ln)}}
-.sx[data-tab="fa"] .swap .g{align-items:start}
-.sx[data-tab="fa"] .swap .who{gap:10px}
-.sx[data-tab="fa"] .swap .sw-strip{margin-top:14px}
-.sx[data-tab="fa"] .swap .acts{margin-top:12px}
-#card.cd2 #cardBody{display:flex;flex-direction:column;flex:1;min-height:0}
-/* a laptop screen under 800 pixels tall: the same card, a little tighter, so the columns don't scroll inside */
-@media (max-height:800px) and (min-width:821px){
-  #card.cd2 .cd-h{padding:10px 22px}
-  #card.cd2 .cd-h .pf{width:88px !important;height:88px !important}
-  #card.cd2 .cd-nm{font-size:24px}
-  #card.cd2 .cd-hv .n{font-size:56px}
-  #card.cd2 .cd-hv{padding-block:10px}
-  #card.cd2 .cd-chart{height:116px}
-  #card.cd2 .cd-c{padding-block:10px 8px;gap:8px}
-}
-/* the best swap on a phone: photo and name side by side, then the gain and the player to release in one row */
-@media (max-width:560px){
-  .sx[data-tab="fa"] .swap .g{grid-template-columns:132px minmax(0,1fr);grid-template-areas:"ph who" "gain gain";gap:12px 14px}
-  .sx[data-tab="fa"] .swap .g > .pf{grid-area:ph;width:132px !important;height:128px !important}
-  .sx[data-tab="fa"] .swap .who{grid-area:who}
-  .sx[data-tab="fa"] .swap .name{font-size:34px}
-  .sx[data-tab="fa"] .swap .gain{grid-area:gain;flex-direction:row;justify-content:space-between;align-items:center;gap:12px}
-  .sx[data-tab="fa"] .swap .gain .out{display:grid;grid-template-columns:72px minmax(0,1fr);grid-template-areas:"f r" "f n" "f s";column-gap:10px;row-gap:2px;align-items:center;text-align:start}
-  .sx[data-tab="fa"] .swap .gain .out .pf{grid-area:f;width:72px !important;height:72px !important;margin:0}
-  .sx[data-tab="fa"] .swap .gain .out .rel{grid-area:r;justify-self:start}
-  .sx[data-tab="fa"] .swap .gain .out b{grid-area:n}
-  .sx[data-tab="fa"] .swap .gain .out small{grid-area:s}
-}
+/* ---------- gaps found on a walk through the tabs (25.10.2026 evening) ---------- */
+/* free agents: the table was 15px wider than its block and cut its last column */
+.sx[data-tab="fa"] .ft th,.sx[data-tab="fa"] .ft td{padding-inline:4px}
+/* the league: the season chart's empty state fills its block instead of leaving 250px of nothing under it */
+.sx[data-tab="live"] section[aria-label="לאורך העונה"]{display:flex;flex-direction:column}
+.sx[data-tab="live"] section[aria-label="לאורך העונה"] .ghost{flex:1;height:auto;min-height:178px}
+/* the news: tonight's games in a 12-column grid, so the last row's cards grow to fill the row (7 games: 4 + 3, not 4 + 3 and a hole) */
+.sx[data-tab="news"] .gms{grid-template-columns:repeat(12,minmax(0,1fr))}
+.sx[data-tab="news"] .gms .gc{grid-column:span 3}
+.sx[data-tab="news"] .gms[data-r="3"] .gc:nth-last-child(-n+3){grid-column:span 4}
+.sx[data-tab="news"] .gms[data-r="2"] .gc:nth-last-child(-n+2){grid-column:span 6}
+.sx[data-tab="news"] .gms[data-r="1"] .gc:last-child{grid-column:span 12}
+@media (max-width:1180px){.sx[data-tab="news"] .gms{grid-template-columns:repeat(2,minmax(0,1fr))}.sx[data-tab="news"] .gms .gc,.sx[data-tab="news"] .gms[data-r] .gc:nth-last-child(-n+3){grid-column:auto}}
+@media (max-width:560px){.sx[data-tab="news"] .gms{grid-template-columns:minmax(0,1fr)}}
+/* a phone: the quarter-by-quarter table in "המאץ'" was 16px wider than its block */
+@media (max-width:560px){.sx .qt td:first-child,.sx .qt th:first-child{width:80px;white-space:nowrap}.sx .qt td,.sx .qt th{padding-inline:3px}}
+@media (max-width:560px){.sx .qt td:first-child,.sx .qt th:first-child{padding-inline-start:12px}.sx .qt td:last-child,.sx .qt th:last-child{padding-inline-end:12px}}
