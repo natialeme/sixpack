@@ -578,7 +578,8 @@ function todayPlan(T){
 function actualMinutes(pid, p){
   const rows = seasonLog(pid).slice(-3), mins = rows.map(g => g[3] / 60).filter(Number.isFinite);
   if (!mins.length) return {average: null, baseline: null, delta: null, games: 0, rising: false};
-  const average = mean(mins), baseline = p.pl?.min ?? p.min ?? null;
+  // Zero means the preseason forecast is missing, not a prediction of zero minutes.
+  const average = mean(mins), baseline = p.pl?.min > 0 ? p.pl.min : p.min > 0 ? p.min : null;
   const week = SEA.d?.week || 1;
   const partial = week > 1 && (!HIST.weeks || Array.from({length: week - 1}, (_, i) => i + 1).some(w => !HIST.weeks[w] || HIST.partial[w]));
   const delta = baseline != null ? average - baseline : null;
