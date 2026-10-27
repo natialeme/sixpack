@@ -573,6 +573,17 @@ function todayPlan(T){
   return {ins, outs, slate, tonight, worth, at};
 }
 
+// Minutes actually played in the latest three completed games. This is a visible signal only;
+// it does not change the existing value, recommendation, injury or lock rules.
+function actualMinutes(pid, p){
+  const rows = seasonLog(pid).slice(-3), mins = rows.map(g => g[3] / 60).filter(Number.isFinite);
+  if (!mins.length) return {average: null, baseline: null, delta: null, games: 0, rising: false};
+  const average = mean(mins), baseline = p.pl?.min ?? p.min ?? null;
+  const week = SEA.d?.week || 1;
+  const partial = week > 1 && (!HIST.weeks || Array.from({length: week - 1}, (_, i) => i + 1).some(w => !HIST.weeks[w] || HIST.partial[w]));
+  const delta = baseline != null ? average - baseline : null;
+  return {average, baseline, delta, games: mins.length, partial, rising: !partial && mins.length === 3 && delta != null && delta >= 5};
+}
 function freeAgents(D, Wm, mineT){
   const rostered = new Set(D.rosters.flatMap(r => [...(r.players || []), ...(r.reserve || [])]));
   const trend = Object.fromEntries((D.trend || []).map(t => [t.player_id, t.count]));
@@ -585,7 +596,7 @@ function freeAgents(D, Wm, mineT){
     const team = teamOf(p.id), sch = Wm.byTeam[team] || [];
     const left = sch.filter(x => !x.done).length;
     const wkMin = mean((Wm.pj[p.id] || []).map(x => x.min));
-    return {p, team, inj: injOf(p.id), left, games: sch.length, next: (Wm.pjN[p.id] || []).length, wkMin, dMin: wkMin && p.min ? wkMin - p.min : 0,
+    return {p, team, inj: injOf(p.id), left, games: sch.length, next: (Wm.pjN[p.id] || []).length, wkMin, actualMin: actualMinutes(p.id, p), dMin: wkMin && p.min ? wkMin - p.min : 0,
       trend: trend[p.id] || 0, waiverUntil: waivers[p.id] || null, val: adj(p), gain: worst ? adj(p) - adj(worst.p) : 0};
   });
   return {list, worst, mineAll, trend, rostered};
@@ -1207,13 +1218,14 @@ function renderFA(){
       <label class="chk"><input type="checkbox" ${F.healthy ? "checked" : ""} onchange="SEA.fa.healthy=this.checked;renderFA()"> בלי פצועים</label>
       <label class="chk"><input type="checkbox" ${F.watch ? "checked" : ""} onchange="SEA.fa.watch=this.checked;renderFA()"> רק במעקב (${watch.size})</label></div>
     <div class="tablewrap"><table class="std dt">
-    <thead><tr><th class="w-star"></th><th>שחקן</th>${th("val", "ערך", "", "נקודות לשבוע ב-Lock-in לפי המודל, אחרי סיכון")}${th("gain", "פער", "", "מול השחקן הכי חלש שלך")}${th("avg", "בפועל", "", "ממוצע הנקודות שלו העונה בניקוד של הליגה, ובסוגריים כמה משחקים")}<th class="hide-sm" title="שלושת המשחקים האחרונים, מהישן לחדש. ירוק = מעל התחזית, אפור = מתחת">אחרונים</th>${th("fpg", "תחזית", "hide-sm", "תחזית למשחק")}${th("left", "השבוע", "", "משחקים שנשארו מתוך כל המשחקים של הקבוצה השבוע")}${th("next", "שבוע הבא", "hide-sm")}${th("min", "דקות", "hide-sm", "דקות בתחזית של השבוע מול התחזית לעונה")}${th("trend", "מגמה", "hide-sm", "כמה הוסיפו אותו ב-Sleeper ב-24 השעות האחרונות")}</tr></thead>
+    <thead><tr><th class="w-star"></th><th>שחקן</th>${th("val", "ערך", "", "נקודות לשבוע ב-Lock-in לפי המודל, אחרי סיכון")}${th("gain", "פער", "", "מול השחקן הכי חלש שלך")}${th("avg", "בפועל", "", "ממוצע הנקודות שלו העונה בניקוד של הליגה, ובסוגריים כמה משחקים")}<th class="hide-sm" title="שלושת המשחקים האחרונים, מהישן לחדש. ירוק = מעל התחזית, אפור = מתחת">אחרונים</th>${th("fpg", "תחזית", "hide-sm", "תחזית למשחק")}${th("left", "השבוע", "", "משחקים שנשארו מתוך כל המשחקים של הקבוצה השבוע")}${th("next", "שבוע הבא", "hide-sm")}${th("min", "דקות תחזית", "hide-sm", "דקות בתחזית של השבוע מול התחזית לעונה")}<th class="hide-sm" title="ממוצע דקות בפועל עד שלושת המשחקים האחרונים; ↑ = לפחות 5 דקות מעל תחזית קדם העונה בשלושה משחקים">דקות בפועל</th>${th("trend", "מגמה", "hide-sm", "כמה הוסיפו אותו ב-Sleeper ב-24 השעות האחרונות")}</tr></thead>
     <tbody>${list.length ? list.map(x => `<tr class="${watch.has(x.p.id) ? "watched" : ""}"><td class="w-star"><button class="star ${watch.has(x.p.id) ? "on" : ""}" onclick="toggleWatch('${x.p.id}')" title="${watch.has(x.p.id) ? "הסרה מרשימת המעקב" : "מעקב: התראה כשהוא משתלם"}" aria-label="מעקב">${IC.star}</button></td>
       <td><div class="pcell">${av(x.p, 28)}<div><div class="nm">${nameLink(x.p)} ${injBadge(x.inj)}${x.waiverUntil ? ` <span class="ib q" title="שוחרר לאחרונה, עובר דרך waivers">waivers עד ${new Date(x.waiverUntil).toLocaleDateString("he-IL", {day: "numeric", month: "numeric"})}</span>` : ""}</div><div class="psub">${esc(x.team)} · ${(x.p.pos || []).join("/")}${x.p.age ? ` · גיל ${x.p.age}` : ""}</div></div></div></td>
       <td class="num"><b>${f1(x.val)}</b></td><td class="num ${x.gain > 0 ? "good" : "bad"}">${sg(x.gain)}</td><td class="num">${actualCell(x.p.id, x.p.fpg)}</td><td class="num hide-sm">${lastCell(x.p.id, x.p.fpg)}</td><td class="num hide-sm">${f1(x.p.fpg)}</td>
       <td class="num">${x.left}<span class="muted">/${x.games}</span></td><td class="num hide-sm">${x.next || "—"}</td>
       <td class="num hide-sm ${x.dMin >= 3 ? "good" : x.dMin <= -3 ? "bad" : ""}">${x.wkMin ? `<span dir="ltr">${Math.round(x.wkMin)}${Math.abs(x.dMin) >= 1 ? ` <small>(${x.dMin > 0 ? "+" : "−"}${Math.round(Math.abs(x.dMin))})</small>` : ""}</span>` : "—"}</td>
-      <td class="num hide-sm">${x.trend ? x.trend.toLocaleString("en-US") : ""}</td></tr>`).join("") : `<tr><td colspan="11" class="empty-row">${F.watch ? "אין שחקנים ברשימת המעקב. לוחצים על הכוכב ליד שחקן כדי לעקוב אחריו." : "אין שחקנים שמתאימים לסינון."}</td></tr>`}</tbody></table></div>
+      <td class="num hide-sm" title="דקות בפועל עד שלושת המשחקים האחרונים; משחקי היום אינם נכללים. כוכבית: חסרים נתוני עבר; חץ: עלייה של 5 דקות ומעלה לעומת התחזית אחרי שלושה משחקים">${x.actualMin.average == null ? "—" : `${Math.round(x.actualMin.average)}${x.actualMin.partial ? "*" : ""}${x.actualMin.rising ? " ↑" : ""}`}</td>
+      <td class="num hide-sm">${x.trend ? x.trend.toLocaleString("en-US") : ""}</td></tr>`).join("") : `<tr><td colspan="12" class="empty-row">${F.watch ? "אין שחקנים ברשימת המעקב. לוחצים על הכוכב ליד שחקן כדי לעקוב אחריו." : "אין שחקנים שמתאימים לסינון."}</td></tr>`}</tbody></table></div>
     <p class="hint">"בפועל" = ממוצע הנקודות שלו העונה בניקוד של הליגה (לחיצה על השם פותחת את כל המשחקים). "השבוע" = משחקים שנשארו מתוך כל המשחקים של הקבוצה השבוע: ב-Lock-in יותר משחקים = יותר הזדמנויות. הכוכב = מעקב, עם התראה כשהשחקן משתלם.${HIST.loading ? " מושך את השבועות הקודמים…" : ""}</p></section>`;
 
   // ---- side ----

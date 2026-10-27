@@ -360,6 +360,10 @@ function renderFA(){
   const avgTxt = id => { const s = seasonSum(id); return s ? `${f1(s.avg)} <em>(${s.gp})</em>` : `<span class="dim">·</span>`; };
   const avgPlain = id => { const s = seasonSum(id); return s ? `${f1(s.avg)} (${s.gp})` : "עוד לא שיחק"; };
   const minTxt = x => x.wkMin ? `${Math.round(x.wkMin)}${Math.abs(x.dMin) >= 1 ? ` <em class="${x.dMin < 0 ? "dn" : "upn"}">(${x.dMin > 0 ? "+" : "−"}${Math.round(Math.abs(x.dMin))})</em>` : ""}` : `<span class="dim">·</span>`;
+  const playedMinTxt = x => { const m = x.actualMin; if (!m || m.average == null) return `<span class="dim">·</span>`;
+    const tip = `ממוצע דקות בפועל ב-${m.games} המשחקים האחרונים${m.baseline != null ? `; תחזית קדם העונה ${f1(m.baseline)}` : ""}. משחקי היום אינם נכללים.${m.partial ? " חסרים משחקים משבועות קודמים." : ""} חץ: עלייה של 5 דקות ומעלה אחרי 3 משחקים; לא שינוי בדירוג`;
+    const diff = m.delta != null && Math.abs(m.delta) >= 1 ? ` <em class="${m.delta < 0 ? "dn" : "upn"}">(${m.delta > 0 ? "+" : "−"}${Math.round(Math.abs(m.delta))})</em>` : "";
+    return `<span title="${esc(tip)}" dir="ltr">${Math.round(m.average)}${m.partial ? "*" : ""}${diff}${m.rising ? ` <em class="upn">↑</em>` : ""}</span>`; };
   const gapTxt = v => `${v >= 0 ? "+" : "−"}${f1(Math.abs(v))}`;
   const sw = bestSwaps(X, 4);
 
@@ -393,7 +397,7 @@ function renderFA(){
   const posOk = x => F.pos === "ALL" || (x.p.pos || []).some(p => (ELIG[F.pos] || [F.pos]).includes(p));
   const list = fa.list.filter(x => posOk(x) && (!F.healthy || !isOut(x.inj)) && (!F.watch || watch.has(x.p.id)) && (!q || x.p.n.toLowerCase().includes(q)));
   const actual = x => { const s = seasonSum(x.p.id); return s ? s.avg : -1; };
-  const SORTS = [["val", "ערך שבועי", x => x.val], ["gain", fa.worst ? `פער מ-${lastName(fa.worst.p.n)}` : "פער", x => x.gain], ["avg", "בפועל", actual], ["fpg", "תחזית", x => x.p.fpg || 0], ["left", "השבוע", x => x.left * 100 + x.val], ["min", "דקות", x => x.dMin], ["trend", "מוסיפים", x => x.trend]];
+  const SORTS = [["val", "ערך שבועי", x => x.val], ["gain", fa.worst ? `פער מ-${lastName(fa.worst.p.n)}` : "פער", x => x.gain], ["avg", "בפועל", actual], ["fpg", "תחזית", x => x.p.fpg || 0], ["left", "השבוע", x => x.left * 100 + x.val], ["min", "דקות תחזית", x => x.dMin], ["actualMin", "שינוי בדקות", x => x.actualMin.partial ? -999 : (x.actualMin.delta ?? -999)], ["trend", "מוסיפים", x => x.trend]];
   const so = SORTS.find(s => s[0] === F.sort) || SORTS[1];
   list.sort((a, b) => (F.dir || -1) * (so[2](a) - so[2](b)));
   const total = list.length, shown = list.slice(0, F.more ? 120 : 15);   // 15 = the height of the side column (design/fa.html), so the row has no dead space
@@ -401,11 +405,11 @@ function renderFA(){
   const lastTwo = id => { const s = seasonSum(id); return s && s.last.length ? `<span class="lg2">${s.last.slice(-2).map(v => `<span>${f1(v)}</span>`).join("")}</span>` : `<span class="dim" style="font-size:11.5px">עוד לא שיחק</span>`; };
   const row = x => `<tr class="${watch.has(x.p.id) ? "hl" : ""}">
     <td><button class="star${watch.has(x.p.id) ? " on" : ""}" onclick="toggleWatch('${x.p.id}')" aria-label="מעקב" title="${watch.has(x.p.id) ? "להוריד ממעקב" : "למעקב"}">${xi("star", 15)}</button></td>
-    <td style="text-align:right"><div class="pl">${hsI(x.p.id, 26)}<div><b>${nameLink(x.p)}</b>${x.inj ? ` <span class="chip ${isOut(x.inj) ? "red" : "amb"}" style="margin-inline-start:4px">${esc(injTxt(x.inj))}</span>` : ""}${x.waiverUntil ? ` <span class="chip" style="margin-inline-start:4px">waivers</span>` : ""}<small>${esc(x.team)} · ${(x.p.pos || []).join("/")}${x.p.age ? ` · גיל ${x.p.age}` : ""}${x.trend ? ` · ${x.trend.toLocaleString("en-US")} מוסיפים` : ""}</small></div></div></td>
+    <td style="text-align:right"><div class="pl">${hsI(x.p.id, 26)}<div><b>${nameLink(x.p)}</b>${x.inj ? ` <span class="chip ${isOut(x.inj) ? "red" : "amb"}" style="margin-inline-start:4px">${esc(injTxt(x.inj))}</span>` : ""}${x.waiverUntil ? ` <span class="chip" style="margin-inline-start:4px">waivers</span>` : ""}<small>${esc(x.team)} · ${(x.p.pos || []).join("/")}${x.p.age ? ` · גיל ${x.p.age}` : ""}${x.trend ? ` · ${x.trend.toLocaleString("en-US")} מוסיפים` : ""}</small><small>דקות בפועל: ${playedMinTxt(x)}</small></div></div></td>
     <td class="num b">${f1(x.val)}</td>
     <td>${x.gain > 0 ? `<span class="gp"><span class="bar"><i style="width:${(x.gain / mxg * 100).toFixed(0)}%;background:var(--good-tx)"></i></span><b>+${f1(x.gain)}</b></span>` : `<span class="dim num">${gapTxt(x.gain)}</span>`}</td>
     <td class="num">${avgTxt(x.p.id)}</td><td>${lastTwo(x.p.id)}</td><td class="num pj">${f1(x.p.fpg)}</td>
-    <td class="num">${x.left}<span class="dim">/${x.games}</span></td><td class="num">${x.next || "·"}</td><td class="num mn">${minTxt(x)}</td></tr>`;
+    <td class="num">${x.left}<span class="dim">/${x.games}</span></td><td class="num">${x.next || "·"}</td><td class="num mn">${minTxt(x)}</td><td class="num mn">${playedMinTxt(x)}</td></tr>`;
   html.push(`<section class="blk s9 paper" aria-label="שחקנים פנויים" style="padding-bottom:8px"><div class="bh"><h2>שחקנים פנויים</h2><span class="meta">${total}</span><span class="sp"></span><a href="${SLEEPER_URL}" target="_blank" rel="noopener">Sleeper ${xi("ext", 12)}</a></div>
     <div class="tw"><div class="vr" role="tablist" aria-label="מיון">${SORTS.map(([k, t]) => `<button class="${so[0] === k ? "on" : ""}" onclick="sortFA('${k}')" role="tab" aria-selected="${so[0] === k}">${esc(t)}</button>`).join("")}
         <small>ערך שבועי = נקודות לשבוע ב-Lock-in לפי המודל, אחרי סיכון פציעה. פער = מול השחקן הכי חלש אצלך.</small></div>
@@ -413,9 +417,9 @@ function renderFA(){
           <button class="tog${F.healthy ? " on" : ""}" onclick="SEA.fa.healthy=!SEA.fa.healthy;renderFA()"><span class="bx">${F.healthy ? xi("check", 10) : ""}</span>בלי פצועים</button>
           <button class="tog${F.watch ? " on" : ""}" onclick="SEA.fa.watch=!SEA.fa.watch;renderFA()"><span class="bx">${F.watch ? xi("check", 10) : ""}</span>רק במעקב (${watch.size})</button>
           <label class="srch">${xi("search", 14)}<input id="faQ" value="${esc(F.q || "")}" placeholder="חיפוש שחקן" oninput="faSearch(this)" aria-label="חיפוש שחקן"></label></div>
-        <div class="tsc"><table class="tb ft"><thead><tr><th></th><th style="text-align:right">שחקן</th><th>ערך</th><th>פער</th><th>בפועל</th><th>שני האחרונים</th><th>תחזית</th><th>השבוע</th><th>הבא</th><th>דקות</th></tr></thead>
-        <tbody>${shown.map(row).join("") || `<tr><td colspan="10" class="dim" style="height:44px;text-align:center">אין שחקנים שמתאימים לסינון</td></tr>`}
-        ${total > shown.length ? `<tr><td colspan="10" style="height:40px;text-align:center"><button class="btn" onclick="SEA.fa.more=true;renderFA()">עוד ${total - shown.length} שחקנים</button></td></tr>` : ""}</tbody></table></div></div></div></section>`);
+        <div class="tsc"><table class="tb ft"><thead><tr><th></th><th style="text-align:right">שחקן</th><th>ערך</th><th>פער</th><th>בפועל</th><th>שני האחרונים</th><th>תחזית</th><th>השבוע</th><th>הבא</th><th title="תחזית שבועית מול תחזית קדם העונה">דקות תחזית</th><th title="דקות בפועל: ממוצע עד שלושת המשחקים האחרונים. חץ מסמן עלייה של 5 דקות אחרי 3 משחקים">דקות בפועל</th></tr></thead>
+        <tbody>${shown.map(row).join("") || `<tr><td colspan="11" class="dim" style="height:44px;text-align:center">אין שחקנים שמתאימים לסינון</td></tr>`}
+        ${total > shown.length ? `<tr><td colspan="11" style="height:40px;text-align:center"><button class="btn" onclick="SEA.fa.more=true;renderFA()">עוד ${total - shown.length} שחקנים</button></td></tr>` : ""}</tbody></table></div><p class="note">דקות בפועל: ממוצע עד שלושת המשחקים האחרונים, ללא משחקי היום; בסוגריים ההפרש מתחזית קדם העונה. ↑ = עלייה של 5 דקות ומעלה אחרי 3 משחקים. * = נתוני עבר חסרים. הסימון אינו משנה את הדירוג.</p></div></div></section>`);
 
   // ---- side: injury openings and Sleeper adds ----
   const opps = [];
