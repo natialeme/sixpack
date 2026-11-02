@@ -13,7 +13,7 @@
 
 <title>Six Pack</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&family=Rubik:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 /* the old stylesheet lives in a layer: app.css (unlayered) always wins, and inside the new views it is reverted entirely */
 @layer old, reset;
@@ -1473,6 +1473,8 @@ details.al-done .al{margin-top:8px}
 }
 </style>
 <link rel="stylesheet" href="app.css?v=f983118b">
+<link rel="stylesheet" href="app-light.css?v=6badedbb">
+<script>try{var t=location.hash==="#dark"?"dark":localStorage.getItem("sp-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body class="app2">
 <!-- the rail (24.10.2026, design/week.html): the tabs, then the bell and the settings. #tabs holds only tab buttons -->
@@ -1493,6 +1495,7 @@ details.al-done .al{margin-top:8px}
   <div class="rail-fill"></div>
   <button class="icon-btn" id="bellBtn" type="button" aria-label="התראות" aria-haspopup="true" aria-expanded="false" hidden onclick="toggleAlertsPop()"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bdg num" id="bellN" hidden></span><span class="rl">התראות</span></button>
   <button class="icon-btn" id="settingsBtn" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg><span class="rl">הגדרות</span></button>
+<button class="icon-btn" id="themeBtn" type="button" onclick="(function(b){var d=document.documentElement,n=d.dataset.theme==='dark'?'light':'dark';d.dataset.theme=n;try{localStorage.setItem('sp-theme',n)}catch(e){}b.querySelector('span').textContent=n==='dark'?'מצב בהיר':'מצב כהה'})(this)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><span>מצב כהה</span></button>
 </aside>
 <header>
   <div class="hbar">
@@ -1601,9 +1604,9 @@ details.al-done .al{margin-top:8px}
 <script src="board.js?v=991e7cb7"></script>
 <script src="season2025.js?v=fc3f3bd8"></script>
 <script src="league_tabs.js?v=22035131"></script>
-<script src="season.js?v=930d44b3"></script>
+<script src="season.js?v=4f9499d6"></script>
 <script src="news.js?v=138f824a"></script>
-<script src="app.js?v=368d91fb"></script>
+<script src="app.js?v=8fbca02a"></script>
 <script>
 "use strict";
 const B = window.BOARD;
@@ -2502,6 +2505,8 @@ function render(){
 }
 function setTab(t){
   S.tab = t; save();
+  document.body.classList.toggle("arc", !["week", "fa", "live", "news"].includes(t) || !inSeason());
+  document.body.classList.toggle("tabweek", t === "week");
   document.querySelectorAll(".view").forEach(v => { v.hidden = v.dataset.tab !== t; });
   render(); window.scrollTo(0, 0);
   if (t === "league") renderSeason();
@@ -2604,5 +2609,6 @@ function autoSync(){
 autoSync(); setInterval(autoSync, 60e3);
 if (!S.mySlot && !QTAB) openSettings();
 </script>
+<script>try{if(document.documentElement.dataset.theme==="dark")document.querySelector("#themeBtn span").textContent="מצב בהיר"}catch(e){}</script>
 </body>
 </html>

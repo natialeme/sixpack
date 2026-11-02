@@ -19,7 +19,7 @@ const SEASON_TABS = ["week", "fa", "live", "news"];
 const SLEEPER_URL = `https://sleeper.com/leagues/${LIVE_LEAGUE}`;
 // a free agent alert needs this many points a week over my weakest player (as daily_alert.py). It was 3 until 22.10.2026,
 // when the league's scoring was halved: 1.5 keeps the same meaning in the new scale
-const FA_GAIN = 1.5;
+const SWAP_MIN = 3;   // points a game over the player he replaces, a move worth showing: a starting guess, to tune from the waiver journal
 
 const inSeason = () => (B.draft && B.draft.status === "complete") || currentPick() > TOTAL;
 const usDate = t => new Intl.DateTimeFormat("en-CA", {timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit"}).format(t);
@@ -244,14 +244,14 @@ function compactWeek(rows){
   (rows || []).forEach(r => {      // today's games may still be on: they join tomorrow
     const s = r.stats || {};
     if (!s.sp || !r.date || r.date >= today) return;
-    (out[r.player_id] = out[r.player_id] || []).push([r.date, Math.round(fpS(s) * 100) / 100, Math.round(s.sp / 60), s.sp, BLEND_LINE.map(k => s[k] || 0)]);   // Sleeper scores in quarters
+    (out[r.player_id] = out[r.player_id] || []).push([r.date, Math.round(fpS(s) * 100) / 100, Math.round(s.sp / 60), s.sp, BLEND_LINE.map(k => s[k] || 0), s.fga || 0]);   // Sleeper scores in quarters
   });
   return out;
 }
 async function loadHistory(D){
   if (HIST.loading) return false;
   if (!HIST.weeks) {
-    try { const h = JSON.parse(localStorage.getItem(HIST_KEY)); HIST.weeks = h && h.season === D.season && h.sc === scSig() && h.v === 2 ? h.weeks : {}; }
+    try { const h = JSON.parse(localStorage.getItem(HIST_KEY)); HIST.weeks = h && h.season === D.season && h.sc === scSig() && h.v === 3 ? h.weeks : {}; }
     catch (e) { HIST.weeks = {}; }
   }
   const missing = [];
@@ -268,7 +268,7 @@ async function loadHistory(D){
     catch (e) { break; }
   }
   const keep = Object.fromEntries(Object.entries(HIST.weeks).filter(([w]) => !HIST.partial[w]));
-  try { localStorage.setItem(HIST_KEY, JSON.stringify({season: D.season, sc: scSig(), v: 2, weeks: keep})); } catch (e) {}
+  try { localStorage.setItem(HIST_KEY, JSON.stringify({season: D.season, sc: scSig(), v: 3, weeks: keep})); } catch (e) {}
   HIST.loading = false; HIST.memo = null;
   return added > 0;
 }
@@ -585,6 +585,43 @@ function actualMinutes(pid, p){
   const delta = baseline != null ? average - baseline : null;
   return {average, baseline, delta, games: mins.length, partial, rising: !partial && mins.length === 3 && delta != null && delta >= 5};
 }
+// What a player is worth now, from his games (replay of 2025 and 2026, 02.11.2026): half blendM, half points a minute times
+// his minutes in the last three games. Before three games, blendM alone. A free agent can be recommended only after three
+// games and with one in the last ten days, the pool the replay tested. Same as form() in engine/week_report.py.
+let formMemo = {src: null, by: {}};
+function formOf(p){
+  const log = seasonLog(p.id);
+  if (formMemo.src !== HIST.memo) formMemo = {src: HIST.memo, by: {}};
+  if (formMemo.by[p.id]) return formMemo.by[p.id];
+  const fpg = p.fpg || 1, n = log.length;
+  const {m} = blendM(fpg, p.sd || Math.max(4, 0.3 * fpg), p.pl, log.map(g => gameOf(g[1], g[3], g[4])));
+  const last3 = log.slice(-3), m3 = n ? mean(last3.map(g => g[3] / 60)) : 0, minAll = n ? mean(log.map(g => g[3] / 60)) : 0;
+  const fc = n >= 3 ? (m + log.reduce((a, g) => a + g[1], 0) / log.reduce((a, g) => a + g[3] / 60, 0) * m3) / 2 : m;
+  const shots = log.slice(-5).map(g => g[5]).filter(Number.isFinite);
+  const today = dObj(todayUS()).getTime();
+  return formMemo.by[p.id] = {n, fc, m3, minAll, l3: n ? mean(last3.map(g => g[1])) : 0, fga: shots.length ? mean(shots) : null,
+    ok: n >= 3 && today - dObj(log[n - 1][0]).getTime() <= 10 * DAY};
+}
+// the player with his weekly value moved by the same ratio, so adj() and lineup() work on it. The archive tabs keep p.val
+const liveMemo = new Map();
+function liveP(p){
+  const form = formOf(p), hit = liveMemo.get(p.id);
+  if (hit && hit.form === form) return hit;
+  const o = {...p, form, val: p.fpg > 0 ? (p.val || 0) * form.fc / p.fpg : p.val};
+  liveMemo.set(p.id, o);
+  return o;
+}
+const adjL = p => adj(liveP(p));
+// why his name is worth a look: shown beside it, not part of the value
+function faWhy(x){
+  const f = x.form, last = lastName(x.p.n), out = [];
+  if (x.hot) out.push(`ברצף: ${f1(f.l3)} ב-3 אחרונים`);
+  if (x.actualMin && x.actualMin.rising) out.push("דקות עולות");
+  if (f.fga != null && f.fga >= 15) out.push(`${Math.round(f.fga)} זריקות למשחק`);
+  const news = typeof NEWS !== "undefined" && NEWS.news ? NEWS.news.filter(a => `${a.headline || ""} ${a.description || ""}`.includes(last)).length : 0;
+  if (news) out.push(news === 1 ? "כתבה אחת" : `${news} כתבות`);
+  return out;
+}
 function freeAgents(D, Wm, mineT){
   const rostered = new Set(D.rosters.flatMap(r => [...(r.players || []), ...(r.reserve || [])]));
   const trend = Object.fromEntries((D.trend || []).map(t => [t.player_id, t.count]));
@@ -592,13 +629,15 @@ function freeAgents(D, Wm, mineT){
   const waivers = {};
   D.tx.filter(t => t.status === "complete" && t.drops).forEach(t => Object.keys(t.drops).forEach(id => { if (now - t.created < clear) waivers[id] = Math.max(waivers[id] || 0, t.created + clear); }));
   const mineAll = mineT ? [...mineT.st.filter(Boolean), ...mineT.bench] : [];
-  const worst = mineAll.filter(x => !x.p.stub).sort((a, b) => adj(a.p) - adj(b.p))[0] || null;
+  const worst = mineAll.filter(x => !x.p.stub).sort((a, b) => formOf(a.p).fc - formOf(b.p).fc)[0] || null;
+  const worstFc = worst ? formOf(worst.p).fc : 0;
   const list = B.players.filter(p => !rostered.has(p.id)).map(p => {
     const team = teamOf(p.id), sch = Wm.byTeam[team] || [];
     const left = sch.filter(x => !x.done).length;
-    const wkMin = mean((Wm.pj[p.id] || []).map(x => x.min));
+    const wkMin = mean((Wm.pj[p.id] || []).map(x => x.min)), form = formOf(p);
     return {p, team, inj: injOf(p.id), left, games: sch.length, next: (Wm.pjN[p.id] || []).length, wkMin, actualMin: actualMinutes(p.id, p), dMin: wkMin && p.min ? wkMin - p.min : 0,
-      trend: trend[p.id] || 0, waiverUntil: waivers[p.id] || null, val: adj(p), gain: worst ? adj(p) - adj(worst.p) : 0};
+      trend: trend[p.id] || 0, waiverUntil: waivers[p.id] || null, val: adjL(p), gain: worst ? adjL(p) - adjL(worst.p) : 0,
+      form, fc: form.fc, fcGain: worst ? form.fc - worstFc : 0, hot: !!worst && form.ok && form.l3 >= form.fc + 3 && form.l3 >= worstFc + SWAP_MIN && form.m3 >= form.minAll - 2};
   });
   return {list, worst, mineAll, trend, rostered};
 }
@@ -606,26 +645,32 @@ function freeAgents(D, Wm, mineT){
 // add X, drop Y: the gain of the whole roster (best nine plus the bench), so positions count, not only value
 let swapMemo = {key: "", list: []};
 function bestSwaps(X, n = 3){
-  const key = `${SEA.at}|${S.risk}`;
+  const key = `${SEA.at}|${S.risk}|${Object.keys(HIST.weeks || {}).length}`;
   if (swapMemo.key === key) return swapMemo.list.slice(0, n);
   const pool = [...X.me.st.filter(Boolean), ...X.me.bench].filter(x => !x.p.stub);
-  const roster = pool.map(x => x.p);
+  const roster = pool.map(x => liveP(x.p));
   const all = [];
+  let near = null;
   if (roster.length) {
     const base = lineup(roster).total;
     // a locked player already gave this week's score: he is never the one to drop
-    X.fa.list.filter(c => !isOut(c.inj) && c.val > 0).sort((a, b) => b.val - a.val).slice(0, 24).forEach(c => pool.filter(d => !d.locked).forEach(d => {
-      const g = lineup(roster.filter(p => p !== d.p).concat([c.p])).total - base;
-      if (g > 0.25) all.push({c, d, g});
+    X.fa.list.filter(c => !isOut(c.inj) && c.val > 0 && c.form.ok).sort((a, b) => b.val - a.val).slice(0, 24).forEach(c => pool.filter(d => !d.locked).forEach(d => {
+      const g = lineup(roster.filter(p => p.id !== d.p.id).concat([liveP(c.p)])).total - base, gap = c.fc - formOf(d.p).fc;
+      if (g <= 0.25) return;
+      if (gap >= SWAP_MIN) all.push({c, d, g, gap});
+      else if (!near || gap > near.gap) near = {c, d, g, gap};
     }));
   }
   all.sort((a, b) => b.g - a.g);
   // each free agent once, paired with the drop that helps most; the same weak player can be the drop for several of them
   const usedC = new Set(), list = [];
   for (const s of all) { if (usedC.has(s.c.p.id)) continue; usedC.add(s.c.p.id); list.push(s); if (list.length >= 6) break; }
-  swapMemo = {key, list};
+  swapMemo = {key, list, near};
   return list.slice(0, n);
 }
+
+// the closest move under the bar, for the "nothing worth it" message; call after bestSwaps
+const nearSwap = () => swapMemo.near || null;
 
 // everything a season screen needs, built from the last pull
 function seasonState(){
@@ -852,12 +897,17 @@ function computeAlerts(X){
       body: `להכניס ${plan.ins.map(x => `<b>${n(x)}</b> (צפי ${f1(plan.worth(x))})`).join(", ")} במקום ${plan.outs.length ? plan.outs.map(x => `${n(x)} (${why(x)})`).join(", ") : "המשבצת הריקה"}. משחק מהספסל לא נספר ואי אפשר לנעול אותו.`,
       due: {t: plan.at, txt: ilTime(plan.at), live: false}, dueLbl: "לפני שהמשחק הראשון מהם מתחיל", act: [{t: "החלפתי", ack: true}]});
   }
-  // a free agent worth a move: the same rule as daily_alert.py, FA_GAIN+ a week over my weakest player
-  const bestFA = fa.list.filter(x => !isOut(x.inj) && !x.waiverUntil).sort((a, b) => b.gain - a.gain)[0];
-  if (bestFA && fa.worst && bestFA.gain >= FA_GAIN)
+  // a free agent worth a move: the same rule as daily_alert.py, SWAP_MIN+ a game over my weakest player
+  const bestFA = fa.list.filter(x => !isOut(x.inj) && !x.waiverUntil && x.form.ok).sort((a, b) => b.fcGain - a.fcGain)[0];
+  if (bestFA && fa.worst && bestFA.fcGain >= SWAP_MIN)
     out.push({id: `fa|${w}|${bestFA.p.id}`, pri: 2, kind: "fa", ic: "trend", pid: bestFA.p.id, title: `להחתים את ${esc(bestFA.p.n)}`,
-      body: `שווה ${sg(bestFA.gain)} לשבוע יותר מ-${n(fa.worst)}, הכי חלש אצלך. ${bestFA.left ? `${bestFA.left} משחקים שנשארו לו השבוע` : "בלי משחקים השבוע"}.`,
+      body: `שווה ${sg(bestFA.fcGain)} למשחק יותר מ-${n(fa.worst)}, הכי חלש אצלך. ${bestFA.left ? `${bestFA.left} משחקים שנשארו לו השבוע` : "בלי משחקים השבוע"}.`,
       act: [{t: "לשוק", fn: "setTab('fa')"}, {t: "לא עכשיו", ack: true}]});
+  // a free agent on a run that would beat my weakest player, each one once a week
+  fa.list.filter(x => x.hot && !isOut(x.inj) && !x.waiverUntil && x !== bestFA).sort((a, b) => b.form.l3 - a.form.l3).slice(0, 2).forEach(x =>
+    out.push({id: `hot|${w}|${x.p.id}`, pri: 2, kind: "fa", ic: "trend", pid: x.p.id, title: `${esc(x.p.n)} ברצף, והוא פנוי`,
+      body: `${f1(x.form.l3)} בממוצע ב-3 המשחקים האחרונים, ${Math.round(x.form.m3)} דקות. ${n(fa.worst)}, הכי חלש אצלך, על ${f1(formOf(fa.worst.p).fc)} למשחק.`,
+      act: [{t: "לשוק", fn: "setTab('fa')"}, {t: "לא עכשיו", ack: true}]}));
   // watchlist
   (S.faWatch || []).forEach(id => {
     if (out.some(a => a.pid === id)) return;      // already an alert to sign him
@@ -1189,14 +1239,14 @@ function renderFA(){
       <div class="sw-p in"><span class="tag in">להחתים</span>${av(s.c.p, 44)}<div><b>${nameLink(s.c.p)}</b><span>${esc(s.c.team)} · ${(s.c.p.pos || []).join("/")} · ${f1(s.c.val)} לשבוע</span><span class="sw-act">${seasonTxt(s.c.p.id)}</span>
         <span class="sw-tags">${injBadge(s.c.inj)}${s.c.waiverUntil ? `<span class="ib q">waivers</span>` : ""}${s.c.trend ? `<span class="ib">${s.c.trend.toLocaleString("en-US")} הוסיפו</span>` : ""}</span></div></div>
       <span class="sw-x">${ric("swap")}</span>
-      <div class="sw-p out"><span class="tag out">לשחרר</span>${av(d.p, 44)}<div><b>${pName(d)}</b><span>${esc(d.team)} · ${(d.p.pos || []).join("/")} · ${f1(adj(d.p))} לשבוע</span><span class="sw-act">${seasonTxt(d.id)}</span><span class="sw-tags">${injBadge(d.inj)}</span></div></div></div>
-      <div class="sw-f"><span>פער בערך ${sg(s.c.val - adj(d.p))}</span><span>משחקים השבוע ${s.c.left} מול ${d.left.length}</span></div></section>`; };
+      <div class="sw-p out"><span class="tag out">לשחרר</span>${av(d.p, 44)}<div><b>${pName(d)}</b><span>${esc(d.team)} · ${(d.p.pos || []).join("/")} · ${f1(adjL(d.p))} לשבוע</span><span class="sw-act">${seasonTxt(d.id)}</span><span class="sw-tags">${injBadge(d.inj)}</span></div></div></div>
+      <div class="sw-f"><span>פער בערך ${sg(s.c.val - adjL(d.p))}</span><span>משחקים השבוע ${s.c.left} מול ${d.left.length}</span></div></section>`; };
   // my weakest players against the best free agent (the spotlight tick): how much room there is to upgrade
-  const weak = fa.mineAll.filter(x => !x.p.stub).sort((a, b) => adj(a.p) - adj(b.p)).slice(0, 4);
+  const weak = fa.mineAll.filter(x => !x.p.stub).sort((a, b) => adjL(a.p) - adjL(b.p)).slice(0, 4);
   const bestFree = fa.list.filter(x => !isOut(x.inj)).reduce((a, x) => (!a || x.val > a.val ? x : a), null);
-  const scaleW = Math.max(bestFree ? bestFree.val : 0, ...weak.map(x => adj(x.p)), 1);
+  const scaleW = Math.max(bestFree ? bestFree.val : 0, ...weak.map(x => adjL(x.p)), 1);
   const weakHtml = `<section class="panel b-weak"><div class="ph"><h2>הכי חלשים אצלך</h2><span class="meta">מי הולך לשוק אם מחתימים</span></div>
-    <div class="wk4">${weak.map(x => { const v = adj(x.p); return `<div class="wk4-r"><span class="who">${av(x.p, 22)}<span class="wk4-n">${nameLink(x.p)}</span></span>
+    <div class="wk4">${weak.map(x => { const v = adjL(x.p); return `<div class="wk4-r"><span class="who">${av(x.p, 22)}<span class="wk4-n">${nameLink(x.p)}</span></span>
       <span class="wk4-b" role="img" aria-label="ערך ${f1(v)}${bestFree ? `, הכי טוב שפנוי ${f1(bestFree.val)}` : ""}"><i style="width:${(v / scaleW * 100).toFixed(1)}%"></i>${bestFree ? `<em style="inset-inline-start:${(bestFree.val / scaleW * 100).toFixed(1)}%"></em>` : ""}</span><b class="num">${f1(v)}</b></div>`; }).join("")}</div>
     <div class="legend-row"><span><i class="bx" style="background:#4a5f88"></i>ערך שבועי</span>${bestFree ? `<span><i class="tick"></i>הכי טוב שפנוי: ${esc(bestFree.p.n)} · ${f1(bestFree.val)}</span>` : ""}</div></section>`;
   const swapsRow = sw.length ? `<div class="row r${sw.length + 1}">${sw.map(swCard).join("")}${weakHtml}</div>`
@@ -1206,7 +1256,7 @@ function renderFA(){
   const posOk = x => F.pos === "ALL" || (x.p.pos || []).some(q => (ELIG[F.pos] || [F.pos]).includes(q));
   let list = fa.list.filter(x => posOk(x) && (!F.healthy || !isOut(x.inj)) && (!F.watch || watch.has(x.p.id)));
   const actual = x => { const s = seasonSum(x.p.id); return s ? s.avg : -1; };
-  const key = {gain: x => x.gain, val: x => x.val, fpg: x => x.p.fpg || 0, avg: actual, left: x => x.left * 100 + x.val, next: x => x.next * 100 + x.val, min: x => x.dMin, trend: x => x.trend}[F.sort] || (x => x.gain);
+  const key = {gain: x => x.gain, val: x => x.val, fpg: x => x.fc, avg: actual, left: x => x.left * 100 + x.val, next: x => x.next * 100 + x.val, min: x => x.dMin, trend: x => x.trend}[F.sort] || (x => x.gain);
   list.sort((a, b) => F.dir * (key(a) - key(b)));
   const total = list.length;
   list = list.slice(0, 50);
