@@ -714,6 +714,18 @@ function toggleLock(id, date){
   sendLock(`${cancel ? "unlock" : "lock"}|${w}|${id}|${selected}`, x.p.n);
   save(); refreshAlerts(); rerenderSeason();
 }
+// "מחכה" (03.11.2026: more games left, he may still score more) and "פספסתי" close the lock alert of this game only.
+// Both post missed|<lock key> as the phone's buttons do, so the phone's reminders and its missed-lock notice for this
+// game stop too. After his next game the bar is checked again, and a new game over the bar is a new alert.
+function skipLock(key, wait){
+  const ev = parseLockEvent(key); if (!ev) return;
+  ackOf()[key] = Date.now();
+  const skip = `missed|${key}`, name = pOf(ev.id).n;
+  S.lockOut = (S.lockOut || []).filter(k => k !== skip); S.lockOut.push(skip); save();
+  if (wait) toast(`${name}: לא נועלים. אחרי המשחק הבא שלו הרף נבדק שוב${lockTopic() ? "" : ". כדי שגם הטלפון יפסיק להזכיר, מחברים את ערוץ ההתראות בהגדרות"}`);
+  flushLocks();
+  refreshAlerts(); rerenderSeason();
+}
 function rerenderSeason(){
   renderHeader();
   if (S.tab === "week") renderWeek();
@@ -784,6 +796,15 @@ function applyLockEvent(ev){
   return true;
 }
 function gotLock(key, at){
+  // "מחכה" or "פספסתי" on the phone: the lock alert of that game closes here too
+  if (key.startsWith("missed|")) {
+    const lk = key.slice(7);
+    if (!parseLockEvent(lk) || ackOf()[lk]) return;
+    ackOf()[lk] = at || Date.now(); save();
+    clearTimeout(LSYNC.rr);
+    LSYNC.rr = setTimeout(() => { refreshAlerts(); rerenderSeason(); }, 200);
+    return;
+  }
   const ev = parseLockEvent(key, at);
   if (!ev || !ev.at || !applyLockEvent(ev)) return;
   // Persist immediately: closing the tab during the redraw debounce must not lose a received event.
@@ -798,7 +819,7 @@ function sendLock(key, name){
   key = `${ev.kind}|${ev.w}|${ev.id}|${ev.date}|${at}`;
   applyLockEvent(parseLockEvent(key));
   // Only the latest unsent intent for this player is useful. An in-flight older post is followed by this one.
-  S.lockOut = (S.lockOut || []).filter(k => { const e = parseLockEvent(k); return e && (e.w !== ev.w || e.id !== ev.id); });
+  S.lockOut = (S.lockOut || []).filter(k => { const e = parseLockEvent(k.replace(/^missed\|/, "")); return e && (e.w !== ev.w || e.id !== ev.id); });
   S.lockOut.push(key); save();
   if (!lockTopic()) { toast(`${name}: הסימון עודכן כאן. הסנכרון יושלם אחרי חיבור ערוץ ההתראות בהגדרות`); return; }
   flushLocks(name);
@@ -810,10 +831,11 @@ async function flushLocks(name){
   let failed = false;
   try {
     while ((S.lockOut || []).length && lockTopic() === t) {
-      const key = S.lockOut[0], ev = parseLockEvent(key);
-      const current = ev && S.lockEvents?.[ev.w]?.[ev.id];
-      if (!ev || (!ev.at && S.locks?.[ev.w]?.[ev.id] !== ev.date) ||
-          (ev.at && current && (current.at > ev.at || (current.at === ev.at && current.key > key)))) {
+      // missed|<lock key> ("מחכה" / "פספסתי") has no version to compare: it goes out as is
+      const key = S.lockOut[0], skip = key.startsWith("missed|"), ev = parseLockEvent(skip ? key.slice(7) : key);
+      const current = ev && !skip && S.lockEvents?.[ev.w]?.[ev.id];
+      if (!ev || (!skip && !ev.at && S.locks?.[ev.w]?.[ev.id] !== ev.date) ||
+          (!skip && ev.at && current && (current.at > ev.at || (current.at === ev.at && current.key > key)))) {
         S.lockOut.shift(); continue;
       }
       const controller = new AbortController();
@@ -870,7 +892,8 @@ function computeAlerts(X){
     out.push({id: `lock|${w}|${x.id}|${last.date}`, pri: 1, kind: "lock", ic: "lock", pid: x.id, title: `לנעול את ${n(x)}`,
       body: (isOut(x.inj) ? `${f1(x.lastFp)} ${vs(last)}, והוא ${esc(injTxt(x.inj))}. נועלים לפני שהמשחק הבא מתחיל.`
         : `${f1(x.lastFp)} ${vs(last)}, מעל הרף ${f1(x.thr)}. ${k === 1 ? "נשאר לו משחק אחד" : `נשארו לו ${k} משחקים`}.`),
-      due: nextDue(x), dueLbl: "לפני המשחק הבא", act: [{t: "נעלתי", fn: `toggleLock('${x.id}')`, primary: true}, {t: "פספסתי", ack: true}]});
+      due: nextDue(x), dueLbl: "לפני המשחק הבא", act: [{t: "נעלתי", fn: `toggleLock('${x.id}')`, primary: true},
+        {t: "מחכה", fn: `skipLock('lock|${w}|${x.id}|${last.date}',1)`}, {t: "פספסתי", fn: `skipLock('lock|${w}|${x.id}|${last.date}')`}]});
   });
   // no notice for an "uncertain" starter (Nati, 24.10.2026): the two values are his last two games, served by Sleeper's
   // older and newer copies, and a game you didn't lock before the next one started can't be locked anymore. He counts

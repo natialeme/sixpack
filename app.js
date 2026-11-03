@@ -605,17 +605,17 @@ function renderNews(){
       : `${list.map(({a, ids}) => `<div class="lnws">${imgOf(a) ? `<img src="${esc(imgOf(a))}" alt="" loading="lazy">` : `<span></span>`}<div><h3 dir="auto"><a href="${esc(href(a))}" target="_blank" rel="noopener">${esc(a.headline)}</a></h3><time>${agoTxt(a.published)}</time>${tags(ids)}</div></div>`).join("")}
         ${shown.length > 5 ? `<div style="text-align:center;margin-top:12px"><button class="btn" onclick="NEWS.more=!NEWS.more;renderNews()">${NEWS.more ? "פחות כתבות" : `עוד ${Math.min(30, shown.length) - 5} כתבות`}</button></div>` : ""}`}</section>`);
 
-  // ---- the injury report: league players only, mine first; stays beside the news ----
+  // ---- the injury report: league players only, mine first; beside the news, and scrolls with the page like it (03.11) ----
   const injRows = [];
   Object.entries(ESPN.inj || {}).forEach(([n, e]) => { const id = idByName(n); if (id && own.has(id)) injRows.push({id, e, k: who(id)}); });
   const ord = {me: 0, opp: 1, lg: 2};
   injRows.sort((a, b) => (ord[a.k] - ord[b.k]) || (new Date(b.e.date) - new Date(a.e.date)));
   const nMe = injRows.filter(r => r.k === "me").length, nOp = injRows.filter(r => r.k === "opp").length;
-  html.push(`<aside class="lside s5"><section class="blk" aria-label="פציעות בליגה"><div class="bh"><h2>פציעות בליגה</h2><span class="meta"><span class="n">${injRows.length}</span> שחקנים · ${nMe} אצלך · ${nOp} אצל היריב</span></div>
+  html.push(`<section class="blk s5" aria-label="פציעות בליגה"><div class="bh"><h2>פציעות בליגה</h2><span class="meta"><span class="n">${injRows.length}</span> שחקנים · ${nMe} אצלך · ${nOp} אצל היריב</span></div>
     <div class="lls">${injRows.slice(0, NEWS.injMore ? 40 : 6).map(({id, e, k}) => { const s = ESPN_ST[e.status] || [e.status, "q"], u = own.get(id);
       return `<div class="lli lij"><span class="pa">${hsI(id, 52)}${tlI(teamOf(id))}</span><div><b>${nameLink(pOf(id))}</b><div class="ow" style="--c:${col(u)}"><i></i>${esc(tName(D, u))}${k === "me" ? " · שלך" : k === "opp" ? " · היריב" : ""}</div><p dir="auto">${esc(e.short || "")}</p>${e.ret ? `<div class="bk">${retTxt(e.ret)}</div>` : ""}</div><span class="chip ${s[1] === "out" ? "red" : s[1] === "ok" ? "" : "amb"}">${esc(s[0])}</span></div>`; }).join("")
       || `<p class="mut">${ESPN.inj ? "אין פצועים בסגלים של הליגה." : "טוען את דוח הפציעות"}</p>`}</div>
-    ${injRows.length > 6 ? `<div style="text-align:center;margin-top:10px"><button class="btn" onclick="NEWS.injMore=!NEWS.injMore;renderNews()">${NEWS.injMore ? "פחות" : `עוד ${injRows.length - 6} פצועים`}</button></div>` : ""}</section></aside>`);
+    ${injRows.length > 6 ? `<div style="text-align:center;margin-top:10px"><button class="btn" onclick="NEWS.injMore=!NEWS.injMore;renderNews()">${NEWS.injMore ? "פחות" : `עוד ${injRows.length - 6} פצועים`}</button></div>` : ""}</section>`);
 
   // ---- moves: the NBA (ESPN) or the league (Sleeper) ----
   const TF = NEWS.txF || "nba";

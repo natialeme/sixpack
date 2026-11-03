@@ -31,6 +31,10 @@ body.app2.arc aside.rail,body.app2.arc>header,#card.cd2{
 :root[data-theme=dark] #card.cd2 .paper{--bg:#121214; --s1:#1b1b1f; --s2:#222227; --s3:#2b2b31; --s4:#35353c; --ln:#34343b; --ln2:#2a2a30; --ln3:#4a4a53; --tx:#f2f2f5; --tx2:#b9b9c3; --tx3:#9494a0; --me:#ff7a45; --me-tx:#ff9a70; --op-tx:#a3acb9; --proj-tx:#a79cf2; --good-tx:#2bc46a; --warn-tx:#ffc061; --bad-tx:#ff9a9a; --now-tx:#c6f432; --hover:#ffffff08; --ring:#ffffff38}
 
 /* ---------- base ---------- */
+/* the page behind the body too: the old layer painted html navy, and it showed on the first paint (03.11.2026) */
+html{background:#f4f3ee}
+:root[data-theme=dark]{background:#121214}
+body.app2 #syncChip:empty{visibility:hidden}
 body.app2:not(.arc){background:#f4f3ee;scrollbar-color:#bdb9ab #f4f3ee}
 :root[data-theme=dark] body.app2:not(.arc){background:#121214;scrollbar-color:#4a4a53 #121214}
 .sx{font:400 14.5px/1.5 Heebo,system-ui,sans-serif;min-height:calc(100vh - 68px)}
@@ -241,8 +245,11 @@ body.app2:not(.arc){background:#f4f3ee;scrollbar-color:#bdb9ab #f4f3ee}
 
 /* ---------- free agents ---------- */
 .sx .lstack{grid-column:span 9;display:flex;flex-direction:column;gap:16px;min-width:0}
-.sx .lside{position:sticky;top:84px;align-self:start;min-width:0}
-.sx .lside.s3{grid-column:span 3}.sx .lside.s4{grid-column:span 4}.sx .lside.s5{grid-column:span 5}
+/* the side column stretches to its row and only the block inside it sticks, so it stops at the end of the row.
+   Until 03.11 the column itself stuck, and it slid over the blocks below it (moves, the season chart, what to add) */
+.sx .lside{min-width:0}
+.sx .lside>.blk{position:sticky;top:84px}
+.sx .lside.s3{grid-column:span 3}.sx .lside.s4{grid-column:span 4}
 .sx .lswap{display:grid;grid-template-columns:232px minmax(0,1fr);gap:22px}
 .sx .lcut{width:232px;height:272px;border-radius:14px;background:var(--s3);overflow:hidden;position:relative;align-self:stretch}
 .sx .lcut img:not(.tl){width:100%;height:100%;object-fit:cover;object-position:top}
@@ -452,9 +459,9 @@ body.app2 aside.rail .brand .mark{background:var(--me);color:#fff;font:700 13px 
 }
 /* a tablet or a small laptop: the short rail of app.css stays; the blocks of 9 and 3 take the row */
 @media (max-width:1180px){
-  .sx .lstack,.sx .lm,.sx .lside.s3,.sx .lside.s4,.sx .lside.s5,.sx .lssn{grid-column:1/-1}
+  .sx .lstack,.sx .lm,.sx .lside.s3,.sx .lside.s4,.sx .lssn{grid-column:1/-1}
   .sx .nx{grid-column:1/-1;min-height:0}
-  .sx .lside{position:static}
+  .sx .lside>.blk{position:relative;top:auto}
   .sx .lmc{grid-column:1/-1}
   .sx .lgcs,.sx .lgm{grid-template-columns:repeat(3,minmax(0,1fr))}
 }

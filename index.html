@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#101012">
+<meta name="theme-color" content="#f4f3ee">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Six Pack">
 
 <title>Six Pack</title>
@@ -1473,25 +1473,19 @@ details.al-done .al{margin-top:8px}
 
 }
 </style>
-<link rel="stylesheet" href="app.css?v=f983118b">
-<link rel="stylesheet" href="app-light.css?v=6badedbb">
+<link rel="stylesheet" href="app.css?v=2f826450">
+<link rel="stylesheet" href="app-light.css?v=e94b4df2">
 <script>try{var t=location.hash==="#dark"?"dark":localStorage.getItem("sp-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body class="app2">
 <!-- the rail (24.10.2026, design/week.html): the tabs, then the bell and the settings. #tabs holds only tab buttons -->
 <aside class="rail" aria-label="ניווט">
-  <div class="brand"><span class="mark" aria-hidden="true">6P</span><span class="brand-t"><b>The Six Pack NBA</b><small>עוזר דראפט</small></span></div>
+  <div class="brand"><span class="mark" aria-hidden="true">6P</span><span class="brand-t"><b>The Six Pack NBA</b><small>עונה 26/27 · Lock-in</small></span></div>
   <nav class="tabs" id="tabs">
     <button data-t="week" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg><span>השבוע שלי</span></button>
     <button data-t="fa" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg><span>שוק חופשי</span></button>
     <button data-t="live" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg><span>הליגה שלנו</span></button>
     <button data-t="news" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg><span>חדשות</span></button>
-    <span class="tab-sep" data-season>ארכיון</span>
-    <button data-t="draft" class="arc"><span>דראפט</span></button>
-    <button data-t="teams" class="arc"><span>קבוצות</span></button>
-    <button data-t="plan" class="arc"><span>תכנון</span></button>
-    <button data-t="live" data-preseason class="arc"><span>הליגה שלנו</span></button>
-    <button data-t="league" class="arc"><span>עונה שעברה</span></button>
   </nav>
   <div class="rail-fill"></div>
   <button class="icon-btn" id="bellBtn" type="button" aria-label="התראות" aria-haspopup="true" aria-expanded="false" hidden onclick="toggleAlertsPop()"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bdg num" id="bellN" hidden></span><span class="rl">התראות</span></button>
@@ -1504,14 +1498,14 @@ details.al-done .al{margin-top:8px}
     <div id="timer" class="timer num" hidden></div>
     <div class="spacer"></div>
     <button id="syncChip" class="chip" type="button" title="לחיצה מדליקה או מכבה סנכרון חי מ-Sleeper" aria-pressed="false" aria-live="polite"></button>
-    <button class="btn" id="undoBtn" title="Ctrl+Z"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>ביטול בחירה</button>
-    <button class="btn" id="practiceBtn">תרגול מול בוטים</button>
+    <button class="btn" id="undoBtn" title="Ctrl+Z" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>ביטול בחירה</button>
+    <button class="btn" id="practiceBtn" hidden>תרגול מול בוטים</button>
     <div id="clock" class="clock"></div>
   </div>
 </header>
 
 <!-- ============ DRAFT ============ -->
-<main class="view grid3" data-tab="draft">
+<main class="view grid3" data-tab="draft" hidden>
   <section class="col-right sticky"><div class="card" id="recCard"></div></section>
   <section class="card">
     <div class="toolbar">
@@ -1605,9 +1599,9 @@ details.al-done .al{margin-top:8px}
 <script src="board.js?v=991e7cb7"></script>
 <script src="season2025.js?v=fc3f3bd8"></script>
 <script src="league_tabs.js?v=22035131"></script>
-<script src="season.js?v=4f9499d6"></script>
+<script src="season.js?v=bbe53c84"></script>
 <script src="news.js?v=138f824a"></script>
-<script src="app.js?v=8fbca02a"></script>
+<script src="app.js?v=b87f954d"></script>
 <script>
 "use strict";
 const B = window.BOARD;
@@ -1629,7 +1623,7 @@ const MY_USER_ID = "1286086845783904256";
 
 const DEFAULT = {mySlot: null, names: Array.from({length: T}, (_, i) => `קבוצה ${i + 1}`), picks: [],
   risk: 100, draftId: "1411664354184617984", sync: false, practice: false, pos: "ALL", sort: "val",
-  extra: {}, stars: [], skip: [], sound: true, tab: "draft", lastPickAt: null, view: "table"};
+  extra: {}, stars: [], skip: [], sound: true, tab: "week", lastPickAt: null, view: "table"};
 let S = load();
 function load(){
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) return Object.assign(structuredClone(DEFAULT), s); } catch (e) {}
@@ -2504,7 +2498,9 @@ function render(){
   checkAlerts(A);
   tickTimer();
 }
+// the archive is gone from the rail (03.11.2026): any other tab, saved or from ?tab=, opens "my week" (SEASON_TABS: season.js)
 function setTab(t){
+  if (!SEASON_TABS.includes(t)) t = "week";
   S.tab = t; save();
   document.body.classList.toggle("arc", !["week", "fa", "live", "news"].includes(t) || !inSeason());
   document.body.classList.toggle("tabweek", t === "week");
@@ -2581,7 +2577,7 @@ $("search").onkeydown = e => {
 document.addEventListener("keydown", e => {
   const typing = ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName);
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !typing) { e.preventDefault(); undo(); }
-  if (e.key === "/" && !typing) { e.preventDefault(); setTab("draft"); $("search").focus(); }
+  if (e.key === "/" && !typing && !inSeason()) { e.preventDefault(); setTab("draft"); $("search").focus(); }
 });
 $("tabs").onclick = e => { const b = e.target.closest("button"); if (b) setTab(b.dataset.t); };
 $("syncChip").onclick = () => inSeason() ? refreshAll() : setSync(!S.sync);
@@ -2595,7 +2591,7 @@ $("toastUndo").onclick = undo;
 const QTAB = new URLSearchParams(location.search).get("tab");
 // after the draft the app opens on "my week" (once; after that it remembers your last tab)
 if (inSeason() && !S.seasonOpened) { S.seasonOpened = true; S.tab = "week"; if (S.sync) S.sync = false; save(); }
-setTab(["week", "fa", "news", "draft", "teams", "plan", "live", "league"].includes(QTAB) ? QTAB : (S.tab || "draft"));
+setTab(SEASON_TABS.includes(QTAB) ? QTAB : S.tab);
 // in season the alerts keep running on every tab, so the bell and the notifications stay current
 if (inSeason()) { startSeasonTimer(); if (!SEA.d) fetchSeason(); }
 setInterval(tickTimer, 1000);

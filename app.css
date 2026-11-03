@@ -727,6 +727,8 @@ body.app2 #alertsPop{width:min(540px,calc(100vw - 100px));max-height:calc(100vh 
   #q .it .tx,#alertsPop .it .tx{flex:1 1 calc(100% - 60px)}
   #q .it .dl,#alertsPop .it .dl{margin-inline-start:43px}
   #q .it .btn:first-of-type,#alertsPop .it .btn:first-of-type{margin-inline-start:auto}
+  /* a lock has three buttons (נעלתי, מחכה, פספסתי, 03.11.2026): the deadline takes its own line, so they stay on one */
+  #q .it:has(.btn:nth-of-type(3)) .dl,#alertsPop .it:has(.btn:nth-of-type(3)) .dl{flex-basis:calc(100% - 43px)}
   #alertsPop .bh{flex-wrap:nowrap}
   #alertsPop .bh .meta{display:none}
 }
