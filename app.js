@@ -136,7 +136,7 @@ function seasonHeader(){
   const oppUid = op && (D.rosters.find(r => r.roster_id === op.roster_id) || {}).owner_id;
   clock.innerHTML = op ? `${uAvI(D, MY_USER_ID, 24)}<span>${esc(tName(D, MY_USER_ID))}</span><b class="n me">${f1(mp.points || 0)}</b><span>:</span><b class="n op">${f1(op.points || 0)}</b><span>${esc(tName(D, oppUid))}</span>${uAvI(D, oppUid, 24)}${SEA.win != null ? `<span class="pc">${Math.round(SEA.win * 100)}%</span>` : ""}` : "";
   const ago = Math.round((Date.now() - SEA.at) / 60000);
-  chip.innerHTML = `<i class="sdot ${SEA.loading ? "busy" : SEA.err ? "bad" : ""}"></i>${SEA.loading ? "מעדכן" : ago ? `עודכן לפני ${ago} דק'` : "עודכן עכשיו"}`;
+  chip.innerHTML = `<i class="sdot ${SEA.loading ? "busy" : SEA.err ? "bad" : ""}"></i>${SEA.loading ? "מעדכן" : SEA.err ? `הרענון נכשל · מוצגים נתונים מלפני ${ago} דק׳` : ago ? `עודכן לפני ${ago} דק'` : "עודכן עכשיו"}`;
 }
 
 // ---------- "השבוע שלי" ----------
@@ -732,36 +732,52 @@ function openCardSeason(id){
   cardLog(p);
 }
 // the game log, pulled from Sleeper when the card opens: this season or last
+let cardLogRequest = 0;
 async function cardLog(p, season){
+  const request = ++cardLogRequest;
   const box = $("cdHist"), sumBox = $("cdSum");
   if (!box) return;
   const cur = String((SEA.d && SEA.d.season) || new Date().getFullYear()), prev = String(+cur - 1);
   CARDH.pid = p.id;
   box.innerHTML = `<div class="cd-skel"></div>`;
-  let logs;
-  try { logs = await Promise.all([playerLog(p.id, cur), playerLog(p.id, prev)]); }
-  catch (e) { if (CARDH.pid === p.id) box.innerHTML = `<p class="dim">לא הצלחתי למשוך את המשחקים מ-Sleeper (${esc(String(e.message || e))}).</p>`; return; }
-  if (CARDH.pid !== p.id || !$("card").open) return;
-  const [now, last] = logs;
-  const sel = season || (now.length ? cur : prev), games = sel === cur ? now : last;
+  const logs = await Promise.allSettled([playerLog(p.id, cur), playerLog(p.id, prev)]);
+  if (request !== cardLogRequest || CARDH.pid !== p.id || !$("card").open) return;
+  const [now, last] = logs.map(r => r.status === "fulfilled" ? r.value.filter(g => !ASOF || g.date < ASOF) : null);
+  const sel = season || (now?.length || !last?.length ? cur : prev), games = sel === cur ? now : last;
   CARDH.season = sel;
-  const head = `<h6>היסטוריית נקודות <span>בניקוד של הליגה</span><span class="sp"></span><span class="seg">${[[cur, `העונה (${now.length})`], [prev, `עונה שעברה (${last.length})`]].map(([s, t]) =>
+  const head = `<h6>היסטוריית נקודות <span>בניקוד של הליגה</span><span class="sp"></span><span class="seg">${[[cur, `העונה (${now?.length ?? "?"})`], [prev, `עונה שעברה (${last?.length ?? "?"})`]].map(([s, t]) =>
     `<button class="${s === sel ? "on" : ""}" onclick="cardLog(PMAP.get('${p.id}'), '${s}')">${t}</button>`).join("")}</span></h6>`;
+  if (!games) { box.innerHTML = head + '<p class="dim">נתוני העונה הזו לא התקבלו מ־Sleeper.</p>'; if (sumBox) sumBox.textContent = "נתוני העונה הזו לא התקבלו"; return; }
   if (!games.length) { box.innerHTML = `${head}<p class="dim" style="margin:10px 0 0">${sel === cur ? "עוד לא שיחק העונה." : "לא שיחק בעונה הזאת."}</p>`; if (sumBox) sumBox.innerHTML = ""; return; }
   const fps = games.map(g => g.fp), avg = mean(fps), isCur = sel === cur && p.fpg, ref = isCur ? p.fpg : avg;
   const tp = Math.max(...fps, ref) || 1, best = Math.max(...fps), above = fps.filter(v => v >= ref).length;
   const wd = s => `${WD[dObj(s).getUTCDay()]}' ${dObj(s).getUTCDate()}.${dObj(s).getUTCMonth() + 1}`;
   // orange: at or above the forecast (the best game darker), grey: below it
   const bars = games.map(g => `<i class="${g.fp === best ? "top" : g.fp >= ref ? "up" : ""}" style="height:${Math.max(3, g.fp / tp * 100).toFixed(1)}%" title="${wd(g.date)} · ${g.away ? "@" : "vs "}${esc(g.opp)} · ${f1(g.fp)}"></i>`).join("");
-  const refTxt = isCur ? `התחזית למשחק (${f1(ref)})` : `הממוצע (${f1(ref)})`;
+  const refTxt = isCur ? `תחזית קדם־העונה (${f1(ref)})` : `הממוצע (${f1(ref)})`;
   const chart = `<div class="cd-chart" style="--g:${games.length > 12 ? 4 : games.length > 6 ? 10 : 24}px"><div class="cd-bars">${bars}</div><span class="cd-ref" style="bottom:calc(22px + (100% - 28px) * ${(ref / tp).toFixed(3)})" title="${refTxt}"><span>קו מקווקו = ${refTxt}</span></span>
     <div class="cd-ax"><span>${wd(games[0].date)}</span><span>${wd(games[games.length - 1].date)}</span></div></div>`;
-  const strip = `<div class="cd-sum"><div><small>ממוצע</small><span class="n">${f1(avg)}</span></div><div><small>הכי טוב</small><span class="n">${f1(best)}</span></div><div><small>משחקים</small><span class="n">${games.length}</span></div><div><small>${isCur ? "מעל התחזית" : "מעל הממוצע"}</small><span class="n ${above / games.length >= 0.5 ? "good" : "amb"}">${above}/${games.length}</span></div></div>`;
+  const strip = `<div class="cd-sum"><div><small>ממוצע</small><span class="n">${f1(avg)}</span></div><div><small>הכי טוב</small><span class="n">${f1(best)}</span></div><div><small>משחקים</small><span class="n">${games.length}</span></div><div><small>${isCur ? "ברף קדם־העונה ומעלה" : "מעל הממוצע"}</small><span class="n ${above / games.length >= 0.5 ? "good" : "amb"}">${above}/${games.length}</span></div></div>`;
+  const predictions = new Map();
+  let review = "";
+  if (isCur) {
+    const history = [];
+    let modelError = 0, baselineError = 0;
+    for (const g of games) {
+      if (g.date >= todayUS()) continue;
+      const {m} = blendM(p.fpg, p.sd || 4, p.pl, history);
+      predictions.set(g, m);
+      modelError += Math.abs(m - g.fp);
+      baselineError += Math.abs(p.fpg - g.fp);
+      history.push(gameOf(g.fp, g.s.sp, g.s));
+    }
+    if (predictions.size) review = `<div class="cd-review"><b>דיוק בנקודות פנטזי</b><p>טעות ממוצעת במשחק · מודל לומד <strong>${f1(modelError / predictions.size)}</strong> · קדם־עונה <strong>${f1(baselineError / predictions.size)}</strong></p><small>שחזור על ${predictions.size} משחקים עד אתמול. לכל משחק חושבה תחזית לפי המשחקים שקדמו לו ובסיס התחזית שזמין היום.</small></div>`;
+  }
   const rows = games.slice(-8).reverse().map(g => { const st = g.s, c = g.fp >= ref * 1.15 ? "hi" : g.fp <= ref * 0.8 ? "lo" : "";
-    return `<tr><td>${wd(g.date)}</td><td dir="ltr">${g.away ? "@" : ""}${esc(g.opp)}</td><td class="num">${Math.round(g.min)}</td>${["pts", "reb", "ast"].map(k => `<td class="num">${st[k] || 0}</td>`).join("")}<td class="num hide-sm">${st.stl || 0}</td><td class="num hide-sm">${st.blk || 0}</td><td class="num hide-sm">${st.to || 0}</td><td class="num sc2 ${c}"><b>${f1(g.fp)}</b></td></tr>`; }).join("");
-  box.innerHTML = `${head}${chart}${strip}
-    <div class="cd-log"><table class="cd-t"><tr><th>תאריך</th><th>יריב</th><th class="num">דק'</th><th class="num">נק'</th><th class="num">ריב'</th><th class="num">אס'</th><th class="num hide-sm">חט'</th><th class="num hide-sm">חס'</th><th class="num hide-sm">איב'</th><th class="num">ניקוד</th></tr>${rows}</table></div>
+    return `<tr><td>${wd(g.date)}</td><td dir="ltr">${g.away ? "@" : ""}${esc(g.opp)}</td><td class="num">${Math.round(g.min)}</td>${["pts", "reb", "ast"].map(k => `<td class="num">${st[k] || 0}</td>`).join("")}<td class="num hide-sm">${st.stl || 0}</td><td class="num hide-sm">${st.blk || 0}</td><td class="num hide-sm">${st.to || 0}</td>${isCur ? `<td class="num">${predictions.has(g) ? f1(predictions.get(g)) : "—"}</td>` : ""}<td class="num sc2 ${c}"><b>${f1(g.fp)}</b></td></tr>`; }).join("");
+  box.innerHTML = `${head}${chart}${strip}${review}
+    <div class="cd-log"><table class="cd-t"><tr><th>תאריך</th><th>יריב</th><th class="num">דק'</th><th class="num">נק'</th><th class="num">ריב'</th><th class="num">אס'</th><th class="num hide-sm">חט'</th><th class="num hide-sm">חס'</th><th class="num hide-sm">איב'</th>${isCur ? '<th class="num">צפי משוחזר</th>' : ""}<th class="num">בפועל</th></tr>${rows}</table></div>
     ${games.length > 8 ? `<p class="note">8 המשחקים האחרונים בטבלה. בגרף כל ${games.length}.</p>` : ""}`;
   // the phone's summary tab: the same numbers without the table
-  if (sumBox) sumBox.innerHTML = `${strip.replace("cd-sum", "cd-sum cd-sum3")}${chart.replace("cd-chart", "cd-chart cd-mini")}`;
+  if (sumBox) sumBox.innerHTML = `${strip.replace("cd-sum", "cd-sum cd-sum3")}${review}${chart.replace("cd-chart", "cd-chart cd-mini")}`;
 }

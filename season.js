@@ -93,18 +93,19 @@ async function fetchSeason(force){
       getJSON(`${API}/league/${lid}/users`), getJSON(`${API}/league/${lid}/rosters`)]);
     const season = lg.season;
     const week = WEEK_Q || (state.league_season === season ? (state.display_week || state.week || 1) : (lg.settings.last_scored_leg || 1));
-    const pSched = loadSchedule(season);
+
     const [matchups, proj, stats, trend, tx0, tx1, nextProj] = await Promise.all([
-      getJSON(`${API}/league/${lid}/matchups/${week}`).catch(() => []),
-      getJSON(`${SAPI}/projections/nba/${season}/${week}?season_type=regular`).catch(() => []),
-      getJSON(`${SAPI}/stats/nba/${season}/${week}?season_type=regular`).catch(() => []),
+      getJSON(`${API}/league/${lid}/matchups/${week}`),
+      getJSON(`${SAPI}/projections/nba/${season}/${week}?season_type=regular`),
+      getJSON(`${SAPI}/stats/nba/${season}/${week}?season_type=regular`),
       getJSON(`${API}/players/nba/trending/add?lookback_hours=24&limit=50`).catch(() => []),
       getJSON(`${API}/league/${lid}/transactions/${week}`).catch(() => []),
       week > 1 ? getJSON(`${API}/league/${lid}/transactions/${week - 1}`).catch(() => []) : Promise.resolve([]),
       getJSON(`${SAPI}/projections/nba/${season}/${week + 1}?season_type=regular`).catch(() => []),
+      loadSchedule(season), pPlayers,
     ]);
+    if (!Array.isArray(matchups) || !Array.isArray(stats) || !Array.isArray(proj)) throw new Error("התקבלו נתוני שבוע לא תקינים");
     const reads = readMatchups(lid, week, matchups);     // the other reads of the matchups, while the rest loads
-    await Promise.all([pSched, pPlayers]);
     SEA.d = {state, lg, users, rosters, week, season, matchups, proj, stats, trend, tx: [...tx0, ...tx1], nextProj};
     SEA.at = Date.now(); SEA.err = null; HIST.memo = null;
     // the past weeks before the alerts: every bar's m counts his games from them (blendM)
@@ -114,7 +115,7 @@ async function fetchSeason(force){
     // the extra reads take about 5 seconds on a page load (12, 0.35 s apart): the screens draw first, from the ledger as it
     // is (a new browser has none: nothing counts as locked until the reads are in), and draw again when they are (25.10.2026)
     const D = SEA.d;
-    reads.then(r => { if (SEA.d === D || SEA.d.week === D.week) { noteReads(D, r); refreshAlerts(); rerenderSeason(); } }).catch(() => {});
+    reads.then(r => { if (SEA.d === D && !SEA.err) { noteReads(D, r); refreshAlerts(); rerenderSeason(); } }).catch(() => {});
     refreshAlerts();
     flushLocks();
   } catch (e) { SEA.err = String(e.message || e); }

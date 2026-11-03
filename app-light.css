@@ -507,3 +507,5 @@ body.app2 aside.rail .bdg{background:var(--warn);color:#fff;border:0;box-shadow:
 .sx .lswap .lstrip .n{white-space:nowrap;font-size:20px}
 .sx .lswap .lstrip em{font-style:normal;font-size:12px;font-weight:500;color:var(--tx3)}
 .sx .lswap .lstrip>div{padding-inline:10px}
+.cd-review{margin:12px 0;padding:12px 14px;border-inline-start:3px solid #427788;border-radius:8px;background:#eef4f4;color:#253c41}
+.cd-review b{font-size:15px}.cd-review p{margin:4px 0}.cd-review small{color:#485e63;line-height:1.5}
