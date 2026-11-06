@@ -509,7 +509,9 @@ function teamWeek(D, Wm, r){
   // game, which is what he would get if the week ended now (an unlocked starter gets his final game automatically).
   // Sleeper's API has no lock flag: a lock shows only once he plays again, or when you mark it here ("נעלתי").
   const cur = st.reduce((a, x) => a + (x && x.locked ? x.pts || 0 : 0), 0);
-  const prov = mp ? mp.points || 0 : st.reduce((a, x) => a + (x && x.pts || 0), 0);
+  // 06.11.2026: the sum of the resolved scores, not Sleeper's mp.points: those flip between versions (218.5/220/227 in a
+  // minute) and can't show a lock of the opponent's that was marked here by hand
+  const prov = st.reduce((a, x) => a + (x && x.pts || 0), 0);
   const exp = st.reduce((a, x) => a + (x ? x.exp : 0), 0);
   const v = st.reduce((a, x) => a + (x ? x.sdW * x.sdW : 0), 0);
   const nLocked = st.filter(x => x && x.locked).length;
