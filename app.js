@@ -170,8 +170,8 @@ function seasonHeader(){
   const myR = rosterOfUser(D, MY_USER_ID), mp = myR && D.matchups.find(m => m.roster_id === myR.roster_id);
   const op = mp && D.matchups.find(m => m.matchup_id === mp.matchup_id && m.roster_id !== mp.roster_id);
   const oppUid = op && (D.rosters.find(r => r.roster_id === op.roster_id) || {}).owner_id;
-  // the same score as the match card (teamWeek's prov: the locks resolved here, the opponent's marks included)
-  const X = op && SEA.sch ? seasonState() : null, pa = X && X.op ? X.me.prov : mp && mp.points || 0, pb = X && X.op ? X.op.prov : op && op.points || 0;
+  // the same score as the match card: the locked points only, as Sleeper shows them (07.11.2026, real locks from loadLegs)
+  const X = op && SEA.sch ? seasonState() : null, pa = X && X.op ? X.me.cur : mp && mp.points || 0, pb = X && X.op ? X.op.cur : op && op.points || 0;
   clock.innerHTML = op ? `${uAvI(D, MY_USER_ID, 24)}<span>${esc(tName(D, MY_USER_ID))}</span><b class="n me">${f1(pa)}</b><span>:</span><b class="n op">${f1(pb)}</b><span>${esc(tName(D, oppUid))}</span>${uAvI(D, oppUid, 24)}${SEA.win != null ? `<span class="pc">${Math.round(SEA.win * 100)}%</span>` : ""}` : "";
   const ago = Math.round((Date.now() - SEA.at) / 60000);
   chip.innerHTML = `<i class="sdot ${SEA.loading ? "busy" : SEA.err ? "bad" : ""}"></i>${SEA.loading ? "מעדכן" : SEA.err ? `הרענון נכשל · מוצגים נתונים מלפני ${ago} דק׳` : ago ? `עודכן לפני ${ago} דק'` : "עודכן עכשיו"}`;
@@ -181,6 +181,8 @@ function seasonHeader(){
 // already counts (not marked here) is cancelled with false, as for your own players. This browser only, no phone.
 function toggleOppLock(id, date){
   const X = seasonState(), w = X && X.myR && X.D.week; if (!w) return;
+  // the real locks came from Sleeper (loadLegs): nothing to mark by hand, a mark would be overridden anyway
+  if (X.D.legs) { toast("הנעילות של היריב נמשכות עכשיו ישר מ-Sleeper, אין צורך לסמן"); return; }
   // any other team's player: the opponent's board and the league's player-by-player matchup
   const x = X.D.rosters.filter(r => r.owner_id !== MY_USER_ID).map(r => teamWeek(X.D, X.Wm, r))
     .flatMap(T => [...T.st, ...T.bench, ...T.ir]).filter(Boolean).find(y => y.id === id);
@@ -216,8 +218,8 @@ function renderWeek(){
     const dots = T => T.st.map((x, i) => `<i class="${x && x.locked ? "on" : ""}" title="${SLOTS[i]}${x ? ` · ${esc(x.p.n)}${x.locked ? ` · נעול ${f1(x.pts || 0)}` : ""}` : ""}"></i>`).join("");
     const team = (T, R, uid, mine) => `<div class="lt ${mine ? "me" : "op"}">
         <div class="lth">${mine ? uAvI(D, uid, 60) : ""}<div><b>${esc(tName(D, uid))}</b><small>${mine ? "אתה · " : ""}${recOf(R)} · מקום ${rankOf(D, R.roster_id)}</small></div>${mine ? "" : uAvI(D, uid, 60)}</div>
-        <div class="lbig n${started ? "" : " model"}" title="${started ? "אם השבוע היה נגמר עכשיו: הנעולים ועוד המשחק האחרון של כל פותח" : "צפי לסוף השבוע"}">${f1(started ? T.prov : T.exp)}</div>
-        <div class="ldots">${dots(T)}<small>נעול ${T.nLocked} מתוך ${SLOTS.length}</small></div></div>`;
+        <div class="lbig n${started ? "" : " model"}" title="${started ? "הנעולים בלבד, כמו התוצאה ב-Sleeper" : "צפי לסוף השבוע"}">${f1(started ? T.cur : T.exp)}</div>
+        <div class="ldots">${dots(T)}<small>נעול ${T.nLocked} מתוך ${SLOTS.length}${started ? ` · אם נגמר עכשיו <span class="n">${f1(T.prov)}</span>` : ""}</small></div></div>`;
     const dayCell = (T, d) => {
       const pts = T.st.filter(x => x && countedOn(x) === d).reduce((a, x) => a + (x.pts || 0), 0);
       if (d >= today) { const n = T.st.filter(x => x && !x.locked && x.g.some(g => g.date === d && !g.done)).length;
@@ -226,7 +228,7 @@ function renderWeek(){
     };
     const qrow = (T, uid) => `<tr><td><span class="tn"><i style="background:${uid === MY_USER_ID ? "var(--me)" : "var(--op)"}"></i>${esc(tName(D, uid))}</span></td>${dates.map(d => dayCell(T, d)).join("")}<td class="n tot">${f1(T.prov)}</td></tr>`;
     const gap = me.exp - op.exp;
-    html.push(`<section class="blk lm dk-only" aria-label="המאץ'"><div class="bh"><h2>המאץ'</h2><span class="meta">שבוע ${D.week} · מול ${esc(tName(D, op.uid))} · ${started ? "אם השבוע היה נגמר עכשיו" : "צפי לסוף השבוע"}</span><span class="sp"></span>${live ? `<span class="chip live"><i></i>חי</span>` : started ? "" : `<span class="chip">עוד לא התחיל</span>`}</div>
+    html.push(`<section class="blk lm dk-only" aria-label="המאץ'"><div class="bh"><h2>המאץ'</h2><span class="meta">שבוע ${D.week} · מול ${esc(tName(D, op.uid))} · ${started ? "נעול, כמו ב-Sleeper" : "צפי לסוף השבוע"}</span><span class="sp"></span>${live ? `<span class="chip live"><i></i>חי</span>` : started ? "" : `<span class="chip">עוד לא התחיל</span>`}</div>
       <div class="lsb">${team(me, myR, MY_USER_ID, true)}
         <div class="lmid"><small>סיכוי לנצח</small><span class="n lpct">${Math.round(pw * 100)}%</span><div class="lsplit"><i style="width:${(pw * 100).toFixed(1)}%"></i></div>
           ${started ? `<small>צפי לסוף השבוע</small><small class="d"><span class="n" style="color:var(--model)">${f1(me.exp)} : ${f1(op.exp)}</span></small>` : `<small>צפי לסוף השבוע</small><small class="d">בינתיים <span class="n">${f1(me.prov)} : ${f1(op.prov)}</span></small>`}</div>
@@ -234,12 +236,12 @@ function renderWeek(){
       <div class="lstrip"><div><small>פער בצפי</small><span class="n ${gap >= 0 ? "pos" : "neg"}">${gap >= 0 ? "+" : "−"}${f1(Math.abs(gap))}</span></div><div><small>משחקים שנשארו</small><span class="n">${me.nLeft} : ${op.nLeft}</span></div><div><small>משחקים היום</small><span class="n">${me.nToday} : ${op.nToday}</span></div><div><small>נעולים</small><span class="n">${me.nLocked} : ${op.nLocked}</span></div></div>
       ${started ? `<div class="tsc lq"><table class="qt"><thead><tr><th>מאיפה הנקודות</th>${dates.map(d => `<th class="${d === today ? "td" : ""}">${WD[dObj(d).getUTCDay()]}' ${dObj(d).getUTCDate()}${d === today ? " · היום" : ""}</th>`).join("")}<th>סה"כ</th></tr></thead><tbody>${qrow(me, MY_USER_ID)}${qrow(op, op.uid)}</tbody></table></div>` : ""}</section>`);
     // the phone's score: the two numbers, the chance as one bar, three numbers below (design/week-phone.html)
-    const pside = (T2, R, uid, mine) => `<div class="pside ${mine ? "me" : "op"}"><div class="pwho">${uAvI(D, uid, 38)}<div><b>${esc(tName(D, uid))}</b><small>${mine ? "אתה · " : ""}${recOf(R)} · מקום ${rankOf(D, R.roster_id)}</small></div></div><span class="pbig n${started ? "" : " model"}">${f1(started ? T2.prov : T2.exp)}</span></div>`;
+    const pside = (T2, R, uid, mine) => `<div class="pside ${mine ? "me" : "op"}"><div class="pwho">${uAvI(D, uid, 38)}<div><b>${esc(tName(D, uid))}</b><small>${mine ? "אתה · " : ""}${recOf(R)} · מקום ${rankOf(D, R.roster_id)}</small></div></div><span class="pbig n${started ? "" : " model"}">${f1(started ? T2.cur : T2.exp)}</span></div>`;
     const pc = Math.round(pw * 100);
     html.push(`<section class="blk psc ph-only" data-pt="now" aria-label="התוצאה">
       <div class="psides">${pside(me, myR, MY_USER_ID, true)}<span class="pcol">:</span>${pside(op, oppR, op.uid, false)}</div>
       <div class="pwin"><span class="n">${pc}%</span><span class="lsplit"><i style="width:${(pw * 100).toFixed(1)}%"></i></span><span class="n op">${100 - pc}%</span></div>
-      <div class="pwl">${live ? `<span class="chip live"><i></i>חי</span> ` : ""}סיכוי לנצח · ${started ? `נעול ${me.nLocked} מול ${op.nLocked}` : "עוד לא התחיל"}</div>
+      <div class="pwl">${live ? `<span class="chip live"><i></i>חי</span> ` : ""}סיכוי לנצח · ${started ? `נעול כמו ב-Sleeper · אם נגמר עכשיו <span class="n">${f1(me.prov)} : ${f1(op.prov)}</span>` : "עוד לא התחיל"}</div>
       <div class="pstrip"><div><small>צפי לסוף השבוע</small><span class="n mdl">${f1(me.exp)} : ${f1(op.exp)}</span></div><div><small>פער בצפי</small><span class="n ${gap >= 0 ? "pos" : "neg"}">${gap >= 0 ? "+" : "−"}${f1(Math.abs(gap))}</span></div><div><small>נשארו</small><span class="n">${me.nLeft} : ${op.nLeft}</span></div></div></section>`);
     // where the points come from, for the phone's "מול היריב": points on a played day, games on a day to come
     const pday = (T2, d) => { const td = d === today ? " td" : "", pts = T2.st.filter(x => x && countedOn(x) === d).reduce((a, x) => a + (x.pts || 0), 0);
@@ -401,7 +403,7 @@ function renderWeek(){
     const orow = (x, slot) => `<tr><td><div class="pl"><span class="sl">${slot}</span>${hsI(x.id, 40)}<div><b>${pName(x)}</b> ${x.inj ? `<span class="q">${esc(injTxt(x.inj))}</span>` : ""}<small>${esc(x.team)}</small></div></div></td>
       ${dates.map(d => oc(x, d)).join("")}<td class="num b">${nn(x.pts)}</td><td>${x.locked ? `<button class="act done" onclick="toggleOppLock('${x.id}','${x.lockedOn}')" title="לחיצה מבטלת את הסימון">${xi("lock", 12)}נעול</button>` : `<span class="act off">${x.left.length ? `נשארו ${x.left.length}` : "סיים"}</span>`}</td></tr>`;
     html.push(`<section class="blk s12 lboard dk-only" data-pt="vs" aria-label="הנעילות של היריב">
-      <div class="bh"><h2>הנעילות של ${esc(tName(D, op.uid))}</h2><span class="meta">Sleeper לא מראה נעילה שלו עד שהשחקן משחק שוב. ראית ב-Sleeper שהוא נעל? לחיצה על הציון מסמנת</span></div>
+      <div class="bh"><h2>הנעילות של ${esc(tName(D, op.uid))}</h2><span class="meta">${D.legs ? "הנעילות נמשכות ישר מ-Sleeper · כהה = נעול, ירוק = נספר אם השבוע נגמר עכשיו" : "Sleeper לא ענה על הנעילות. ראית שם שהוא נעל? לחיצה על הציון מסמנת"}</span></div>
       <div class="tsc"><table class="tb"><thead><tr><th style="width:250px">שחקן</th>${dates.map(d => `<th class="${d === today ? "td" : ""}">${d === today ? `היום · ${dLbl(d)}` : dLbl(d)}</th>`).join("")}<th>נספר</th><th style="width:96px">מצב</th></tr></thead>
       <tbody>${op.st.map((x, i) => x ? orow(x, SLOTS[i]) : "").join("")}</tbody></table></div></section>`);
     // the phone: a row for each of his starters, the games he played as buttons ("he locked this one")
@@ -410,7 +412,7 @@ function renderWeek(){
       <div class="val"><span class="n">${nn(x.pts)}</span><small>${x.locked ? `${xi("lock", 11)}נעול` : "נספר"}</small></div></div>`;
     html.push(`<section class="blk ph-only" data-pt="vs" aria-label="הנעילות של היריב בטלפון"><div class="bh"><h2>הנעילות של ${esc(tName(D, op.uid))}</h2></div>
       <div class="prows">${op.st.map((x, i) => x ? oph(x, SLOTS[i]) : "").join("")}</div>
-      <p class="note">Sleeper לא מראה נעילה שלו עד שהשחקן משחק שוב. ראית שם שהוא נעל? נוגעים בציון של המשחק שעליו נעל. נגיעה נוספת מבטלת.</p></section>`);
+      <p class="note">${D.legs ? "הנעילות נמשכות ישר מ-Sleeper. כהה = המשחק שעליו הוא נעל, ירוק = מה שנספר אם השבוע נגמר עכשיו." : "Sleeper לא ענה על הנעילות. ראית שם שהוא נעל? נוגעים בציון של המשחק שעליו נעל. נגיעה נוספת מבטלת."}</p></section>`);
   }
   // the phone's board: one day at a time, the next game day first, a row for each player (design/week-phone.html, "הלוח")
   const gDays = dates.filter(d => all.some(x => x.g.some(g => g.date === d)));
@@ -610,7 +612,7 @@ function renderLive(){
     const live = TA && TB && [...TA.st, ...TB.st].some(x => x && x.g.some(g => g.live));
     const on2 = (A.points || 0) + (B.points || 0) > 0;
     // the score from the resolved locks (teamWeek's prov), the opponent's marks included; Sleeper's points without the week's model
-    const sc = m => { const T = TW[m.roster_id]; return T ? T.prov : m.points || 0; };
+    const sc = m => { const T = TW[m.roster_id]; return T ? T.cur : m.points || 0; };
     const row = (m, T, uid, p, oth) => { const big = on2 ? f1(sc(m)) : p != null ? `${Math.round(p * 100)}%` : "·", lose = on2 ? sc(m) < sc(oth) : p != null && p < 0.5;
       return `<div class="lms${lose ? " lo" : ""}">${av(uid, 52)}<div><b>${nm(uid)}</b><small>${recOfRid(m.roster_id)} · מקום ${rankOfRid(m.roster_id)}${on2 && p != null ? ` · ${Math.round(p * 100)}%` : ""}</small></div><span class="n pc">${big}</span></div>`; };
     const pair = fa => TA && TB ? `${fa(TA)} : ${fa(TB)}` : "·";
@@ -634,7 +636,7 @@ function renderLive(){
     const [a, b] = opened, ta = TW[a.roster_id], tb = TW[b.roster_id], ua = Mo.byRid[a.roster_id].uid, ub = Mo.byRid[b.roster_id].uid;
     // another team's player (06.11.2026): each game he played is a button, "he locked this one" (toggleOppLock)
     const myIds = new Set([...(TW[myRid] || {st: []}).st, ...((TW[myRid] || {}).bench || [])].filter(Boolean).map(x => x.id));
-    const lockBtns = x => myIds.has(x.id) || !x.played.length || !x.left.length ? "" : `<span class="olk" style="display:inline-flex;gap:4px;margin-inline-start:8px;vertical-align:middle">${x.played.map(g => `<button type="button" class="sc pick${x.lockedOn === g.date ? " k" : ""}" onclick="event.stopPropagation();toggleOppLock('${x.id}','${g.date}')" title="${x.lockedOn === g.date ? "לחיצה מבטלת את הנעילה" : `נעל על המשחק מ-${dLbl(g.date)}`}">${f1(g.fp)}</button>`).join("")}</span>`;
+    const lockBtns = x => (X && X.D.legs) || myIds.has(x.id) || !x.played.length || !x.left.length ? "" : `<span class="olk" style="display:inline-flex;gap:4px;margin-inline-start:8px;vertical-align:middle">${x.played.map(g => `<button type="button" class="sc pick${x.lockedOn === g.date ? " k" : ""}" onclick="event.stopPropagation();toggleOppLock('${x.id}','${g.date}')" title="${x.lockedOn === g.date ? "לחיצה מבטלת את הנעילה" : `נעל על המשחק מ-${dLbl(g.date)}`}">${f1(g.fp)}</button>`).join("")}</span>`;
     const state = x => x.locked ? `<span class="act done"${myIds.has(x.id) ? "" : ` role="button" style="cursor:pointer" title="לחיצה מבטלת" onclick="toggleOppLock('${x.id}','${x.lockedOn}')"`}>${xi("lock", 12)}נעול</span>`
       : x.g.some(g => g.live) ? `<span class="chip live"><i></i>משחק עכשיו</span>`
       : `<span class="left">${x.left.length ? (x.left.length === 1 ? "משחק אחד נשאר" : `${x.left.length} משחקים נשארו`) : x.g.length ? "סיים" : "אין משחקים"}</span>${pend(x)}${lockBtns(x)}`;
@@ -645,10 +647,10 @@ function renderLive(){
         <td class="slc"><span class="sl">${sl}</span></td>
         ${y ? `<td>${state(y)}</td><td class="num b${nCls(y)}">${nn(y.pts)}</td><td class="lf">${who(y)}</td>` : empty}</tr>`; }).join("")
       + `<tr class="sec"><td colspan="3">ספסל · ${ta.bench.map(x => esc(lastName(x.p.n))).join(", ") || "ריק"}</td><td></td><td colspan="3" style="text-align:left">ספסל · ${tb.bench.map(x => esc(lastName(x.p.n))).join(", ") || "ריק"}</td></tr>` : "";
-    const head = (m, T, uid) => `<div class="mh" style="--c:${col(uid)}">${av(uid, 36)}<div><b>${nm(uid)}</b><small>מקום ${rankOfRid(m.roster_id)}${T ? ` · נעול ${f1(T.cur)} · צפי ${f1(T.exp)}` : ""}</small></div><span class="n">${f1(T ? T.prov : m.points || 0)}</span></div>`;
+    const head = (m, T, uid) => `<div class="mh" style="--c:${col(uid)}">${av(uid, 36)}<div><b>${nm(uid)}</b><small>מקום ${rankOfRid(m.roster_id)}${T ? ` · אם נגמר עכשיו ${f1(T.prov)} · צפי ${f1(T.exp)}` : ""}</small></div><span class="n">${f1(T ? T.cur : m.points || 0)}</span></div>`;
     html.push(`<section class="blk s12 mud" data-pt="mu" aria-label="${nm(ua)} מול ${nm(ub)}, שחקן מול שחקן"><div class="bh"><h2>${nm(ua)} מול ${nm(ub)}</h2><span class="meta">שבוע ${wk} · שחקן מול שחקן, ונספר = מה ש-Sleeper סופר עכשיו</span><span class="sp"></span><button class="btn" onclick="muPick(${a.matchup_id})">סגירה</button></div>
       <div class="mhs">${head(a, ta, ua)}<span class="vs">מול</span>${head(b, tb, ub)}</div>
-      ${rowsH ? `<div class="tsc"><table class="tb h2h"><tbody>${rowsH}</tbody></table></div><div class="note">מספר מעומעם = מה שנספר עכשיו, והוא יכול להשתנות במשחק הבא. ראית ב-Sleeper שהיריב נעל? לחיצה על הציון של המשחק שהוא נעל עליו (מתחת ל"משחקים נשארו") מסמנת אותו כנעול.</div>` : `<p class="mut">טוען את השבוע מ-Sleeper</p>`}</section>`);
+      ${rowsH ? `<div class="tsc"><table class="tb h2h"><tbody>${rowsH}</tbody></table></div><div class="note">מספר מעומעם = מה שנספר עכשיו, והוא יכול להשתנות במשחק הבא. ${X && X.D.legs ? "הנעילות של כולם נמשכות ישר מ-Sleeper." : "ראית ב-Sleeper שהיריב נעל? לחיצה על הציון של המשחק שהוא נעל עליו (מתחת ל\"משחקים נשארו\") מסמנת אותו כנעול."}</div>` : `<p class="mut">טוען את השבוע מ-Sleeper</p>`}</section>`);
   }
 
   // ---- the standings, with each roster's strength: the headers sort it, the playoff line only in the league's own order ----

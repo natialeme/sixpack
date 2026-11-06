@@ -94,7 +94,7 @@ async function fetchSeason(force){
     const season = lg.season;
     const week = WEEK_Q || (state.league_season === season ? (state.display_week || state.week || 1) : (lg.settings.last_scored_leg || 1));
 
-    const [matchups, proj, stats, trend, tx0, tx1, nextProj] = await Promise.all([
+    const [matchups, proj, stats, trend, tx0, tx1, nextProj, legs] = await Promise.all([
       getJSON(`${API}/league/${lid}/matchups/${week}`),
       getJSON(`${SAPI}/projections/nba/${season}/${week}?season_type=regular`),
       getJSON(`${SAPI}/stats/nba/${season}/${week}?season_type=regular`),
@@ -102,11 +102,12 @@ async function fetchSeason(force){
       getJSON(`${API}/league/${lid}/transactions/${week}`).catch(() => []),
       week > 1 ? getJSON(`${API}/league/${lid}/transactions/${week - 1}`).catch(() => []) : Promise.resolve([]),
       getJSON(`${SAPI}/projections/nba/${season}/${week + 1}?season_type=regular`).catch(() => []),
+      ASOF ? Promise.resolve(null) : loadLegs(lid, week),
       loadSchedule(season), pPlayers,
     ]);
     if (!Array.isArray(matchups) || !Array.isArray(stats) || !Array.isArray(proj)) throw new Error("התקבלו נתוני שבוע לא תקינים");
     const reads = readMatchups(lid, week, matchups);     // the other reads of the matchups, while the rest loads
-    SEA.d = {state, lg, users, rosters, week, season, matchups, proj, stats, trend, tx: [...tx0, ...tx1], nextProj};
+    SEA.d = {state, lg, users, rosters, week, season, matchups, proj, stats, trend, tx: [...tx0, ...tx1], nextProj, legs};
     SEA.at = Date.now(); SEA.err = null; HIST.memo = null;
     // the past weeks before the alerts: every bar's m counts his games from them (blendM)
     await loadHistory(SEA.d);
@@ -133,6 +134,22 @@ function paintSeason(){
 // a screen that finds no data asks for it, but never more than once in 30 seconds: a failed pull re-renders the screen,
 // and without this the screen would ask again at once, in a loop
 function maybeFetchSeason(){ if (!SEA.loading && (!SEA.tryAt || Date.now() - SEA.tryAt > 30e3)) fetchSeason(); }
+// The real locks (07.11.2026). The public API has no lock flag and its counted scores flip between versions (24.10 and
+// 06.11: Giannis read 31.0 while he was locked on 38.0). Sleeper's own app reads them from its GraphQL endpoint, and
+// matchup_legs_raw answers without signing in (CORS *): starters_games = {player: Sleeper game_id} for every locked
+// starter of every roster. Found in github.com/ultimatewizard1/fantasy-basketball-test (js/sleeper.js) and
+// github.com/Filip-Kin/sleeper-graphql. null when it fails: then the old inference (ledger, "נעלתי") takes over.
+async function loadLegs(lid, week){
+  try {
+    const q = `{ matchup_legs_raw(league_id: "${lid}", round: ${week}) { roster_id starters_games } }`;
+    const r = await fetch(`https://sleeper.com/graphql?query=${encodeURIComponent(q)}`, {credentials: "omit"});
+    const j = await r.json(), rows = j && j.data && j.data.matchup_legs_raw;
+    if (!Array.isArray(rows) || !rows.length) return null;
+    const o = {};
+    rows.forEach(m => { o[m.roster_id] = m.starters_games || {}; });
+    return o;
+  } catch (e) { return null; }
+}
 // ESPN: no cookies, and the browser cache is fine (these change on the order of minutes).
 // Two hosts serve the same API; if one turns a browser away (it rate-limits per host), the other is tried.
 const ESPN_HOSTS = ["https://site.web.api.espn.com", "https://site.api.espn.com"];
@@ -434,7 +451,9 @@ function weekModel(D){
   D.stats.forEach(r => { const s = r.stats || {}; if (!s.sp || (ASOF && r.date >= ASOF)) return; (st[r.player_id] = st[r.player_id] || {})[r.date] = fpS(s); (sl[r.player_id] = sl[r.player_id] || {})[r.date] = s; });
   D.proj.forEach(r => { const s = r.stats || {}; (pj[r.player_id] = pj[r.player_id] || []).push({date: r.date, fp: fpS(s), min: (s.sp || 0) / 60}); });
   D.nextProj.forEach(r => { (pjN[r.player_id] = pjN[r.player_id] || []).push(r.date); });
-  return {today, dates, byTeam, st, sl, pj, pjN};
+  const gid = {};          // Sleeper game_id -> date, to read the real locks (loadLegs)
+  games.forEach(g => { if (g.game_id != null) gid[String(g.game_id)] = g.date; });
+  return {today, dates, byTeam, st, sl, pj, pjN, gid};
 }
 
 function pState(id, Wm, mp, week){
@@ -454,7 +473,9 @@ function pState(id, Wm, mp, week){
   const lastDate = played.length ? played[played.length - 1].date : null;
   // Sleeper gave two different counted scores since his latest game (noteReads): assume no earlier lock, the safer advice
   const seen = lastDate && !ASOF && !g.some(x => x.live) ? (seenLedger()[week] || {})[id] : null;
-  const uncertain = seen && seen.date === lastDate && seen.vals.length > 1 ? seen.vals : null;
+  // the real locks of his roster, when Sleeper's GraphQL answered (loadLegs): they replace every guess below
+  const LG = !ASOF && mp && SEA.d && SEA.d.week === week && SEA.d.legs ? SEA.d.legs[mp.roster_id] || {} : null;
+  const uncertain = !LG && seen && seen.date === lastDate && seen.vals.length > 1 ? seen.vals : null;
   if (uncertain) pts = lastFp;
   // a counted score that matches an earlier game (not the latest) is a lock, once the ledger agrees (CONFIRM_READS)
   // or "נעלתי" was pressed for that game. Read from the ledger even during his game: it holds the reads from before.
@@ -478,6 +499,12 @@ function pState(id, Wm, mp, week){
   if (mark === true && !locked) { locked = true; const hit = pts != null && played.find(x => Math.abs(x.fp - pts) < 0.05); if (hit) lockedOn = hit.date; }
   if (mark === false) { locked = false; lockedOn = null; pts = lastFp; pending = null; }
   if (locked) pending = null;
+  if (LG) {
+    const ld = LG[id] != null ? Wm.gid[String(LG[id])] : null, hit = ld ? played.find(x => x.date === ld) : null;
+    if (hit) { locked = true; lockedOn = hit.date; pts = hit.fp; }
+    else { locked = false; lockedOn = null; if (!g.some(x => x.live)) pts = played.length ? lastFp : null; }
+    pending = null;
+  }
   const out = isOut(inj);
   const k = out ? 0 : left.length;
   const exp = locked ? (pts || 0) : !k ? (pts || 0) : lastFp != null ? Math.max(lastFp, V[k]) : V[k];
