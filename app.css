@@ -1006,3 +1006,21 @@ body.app2 #card.cd2::backdrop{background:#000000a6}
   #card.cd2 .cd-hv .n{font-size:54px}
   #card.cd2 .cd-wk div{padding:5px 8px}
 }
+
+/* the card's injury box (13.11.2026) */
+#card.cd2 .cd-injw{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+#card.cd2 .cd-inj{border-radius:8px;padding:8px 10px;background:var(--s2);border:1px solid var(--ln);font-size:12.5px;display:flex;flex-direction:column;gap:6px}
+#card.cd2 .cd-inj.out{border-inline-start:3px solid #d64545}
+#card.cd2 .cd-inj.q{border-inline-start:3px solid #e0a020}
+#card.cd2 .cd-inj.ok{color:var(--tx3)}
+#card.cd2 .cd-inj-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#card.cd2 .cd-inj-h .sp{flex:1}
+#card.cd2 .cd-inj-h b{display:inline-flex;align-items:center;gap:4px;font-weight:700}
+#card.cd2 .cd-inj-h small{color:var(--tx3)}
+#card.cd2 .cd-inj p{margin:0;color:var(--tx2);line-height:1.45;text-align:left}
+#card.cd2 .cd-news{display:flex;flex-direction:column;gap:4px}
+#card.cd2 .cd-news a{font-size:12px;color:var(--tx2);text-decoration:none;text-align:left;display:flex;gap:8px;justify-content:space-between}
+#card.cd2 .cd-news a:hover{color:var(--tx)}
+#card.cd2 .cd-news time{color:var(--tx3);white-space:nowrap}
+#card.cd2 .cd-inj summary{cursor:pointer;color:var(--tx3);font-size:11.5px}
+#card.cd2 .cd-inj details p{margin-top:4px}

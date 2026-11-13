@@ -878,7 +878,7 @@ function openCardSeason(id){
   dlg.classList.add("sx", "cd2"); dlg.dataset.tab = CARDT; dlg.dataset.who = mine ? "mine" : fa ? "fa" : "other";
   const inj = injOf(id), G = X && X.Wm.byTeam[team] ? X.Wm.byTeam[team] : [], val = adjL(p);
   const chips = [mine ? `<span class="chip me">בסגל שלך</span>` : owner ? `<span class="chip">אצל ${esc(tName(D, owner.owner_id))}</span>` : X ? `<span class="chip fa">שחקן פנוי</span>` : "",
-    inj ? `<span class="chip ${isOut(inj) ? "red" : "amb"}">${esc(injTxt(inj))}</span>` : "",
+    inj ? `<span class="chip ${isOut(inj) ? "red" : "amb"}">${esc(injTxt(inj))}${(() => { const e = espnInjOf(id); return e && e.ret ? ` · ${esc(retTxt(e.ret).replace("חזרה משוערת ", "חוזר "))}` : ""; })()}</span>` : "",
     D && G.length ? `<span class="chip">שבוע ${D.week}: ${G.length} משחקים</span>` : ""].join("");
   const diff = fa && worst ? val - adjL(worst.p) : null;
   const gap = diff != null ? `<div class="gap ${diff >= 0 ? "gup" : "gdn"}">פער ${sg(diff)} מול ${esc(worst.p.n)}</div>` : `<div class="gap"></div>`;
@@ -897,6 +897,20 @@ function openCardSeason(id){
     const body = g.done ? (fp != null ? `<b class="n ${fp >= p.fpg * 1.15 ? "hi" : fp <= p.fpg * 0.8 ? "lo" : ""}">${f1(fp)}</b>` : `<span class="dim">לא שיחק</span>`) : g.live ? `<b class="lv">חי</b>` : `<span class="dim">עוד לא</span>`;
     return `<div class="${g.today ? "td" : ""}"><small>${dLbl(g.date)}</small><span dir="ltr">${g.home ? "" : "@"}${esc(g.opp)}</span>${body}</div>`; }).join("");
   const wkBox = wk ? `<h6>המשחקים השבוע <span>הציון מול התחזית</span></h6><div class="cd-wk">${wk}</div>` : "";
+  // injury and the latest word on him: Sleeper's status, ESPN's report and return date, ESPN headlines with his name (Nati, 13.11.2026)
+  const ei = espnInjOf(id), dTo = ei && ei.ret ? Math.round((dObj(ei.ret).getTime() - dObj(todayUS()).getTime()) / DAY) : null;
+  const est = ei ? (ESPN_ST[ei.status] || [ei.status, "q"]) : null;
+  const heads = (NEWS.news || []).filter(a => `${a.headline || ""} ${a.description || ""}`.includes(p.n)).slice(0, 2);
+  const injBox = (inj || ei) ? `<h6>פציעה ועדכון אחרון <span>${ei && ei.date ? `ESPN · עודכן ${agoTxt(ei.date)}` : "Sleeper"}</span></h6>
+    <div class="cd-inj ${(inj && isOut(inj)) || (est && est[1] === "out") ? "out" : "q"}">
+      <div class="cd-inj-h"><span class="chip ${(inj && isOut(inj)) || (est && est[1] === "out") ? "red" : "amb"}">${esc(est ? est[0] : injTxt(inj))}</span>${(inj && inj.part) || (ei && ei.type) ? `<span>${esc((inj && inj.part) || ei.type)}</span>` : ""}<span class="sp"></span>
+        ${ei && ei.ret ? `<b>${xi("clock", 13)} ${esc(retTxt(ei.ret))}</b><small>${dTo <= 0 ? "היום" : dTo === 1 ? "מחר" : `בעוד ${dTo} ימים`}</small>` : `<small>אין תאריך חזרה</small>`}</div>
+      ${ei && (ei.long || ei.short) ? `<p dir="ltr">${esc(ei.short || ei.long)}</p>${ei.long && ei.short && ei.long !== ei.short ? `<details><summary>הדיווח המלא</summary><p dir="ltr">${esc(ei.long)}</p></details>` : ""}` : inj && inj.note ? `<p dir="auto">${esc(inj.note)}</p>` : ""}</div>`
+    : `<h6>פציעה ועדכון אחרון</h6><div class="cd-inj ok"><span>${ESPN.inj ? "בריא · לא ברשימת הפצועים" : "טוען את דוח הפציעות"}</span></div>`;
+  const newsBox = heads.length ? `<div class="cd-news">${heads.map(a => `<a href="${esc(((a.links || {}).web || {}).href || "#")}" target="_blank" rel="noopener" dir="ltr">${esc(a.headline)}<time>${agoTxt(a.published)}</time></a>`).join("")}</div>` : "";
+  if (dlg.dataset.pid !== id) delete dlg.dataset.injDone;
+  if (!ESPN.inj || !NEWS.news) Promise.all([loadEspnInjuries(), loadNews()]).then(() => { if (dlg.open && ESPN.inj && dlg.dataset.pid === id && !dlg.dataset.injDone) { dlg.dataset.injDone = "1"; openCardSeason(id); } });
+  dlg.dataset.pid = id;
   const av = Math.round((p.av ?? 0.85) * 100), avc = av >= 85 ? "good" : av >= 70 ? "amb" : "bad";
   $("cardBody").innerHTML = `
     <div class="cd-top">
@@ -914,11 +928,11 @@ function openCardSeason(id){
           <div><small>עונה שעברה</small><span class="n">${p.fpgL ? f1(p.fpgL) : "—"}</span><em>${p.gpL || 0} משחקים</em></div>
           <div><small>ADP · דירוג מודל</small><span class="n"><bdi dir="ltr">${p.adp ? f1(p.adp) : "—"} · ${p.rk ?? "—"}</bdi></span></div></div></div></div>
     <div class="cd-tabs" role="tablist">${[["sum", "סיכום"], ["games", "משחקים"], ["proj", "תחזית"]].map(([k, t]) => `<button role="tab" data-k="${k}" class="${k === CARDT ? "on" : ""}" onclick="cardTab('${k}')">${t}</button>`).join("")}</div>
-    <div class="cd-sumwrap">${wkBox}<div id="cdSum"></div></div>
+    <div class="cd-sumwrap"><div class="cd-injw">${injBox}${newsBox}</div>${wkBox}<div id="cdSum"></div></div>
     <div class="cd-body paper">
       <section class="cd-c" data-p="games"><div id="cdHist"></div></section>
       <section class="cd-c" data-p="proj">
-        <div class="cd-wkd">${wkBox}</div>
+        <div class="cd-wkd"><div class="cd-injw">${injBox}${newsBox}</div>${wkBox}</div>
         ${parts.length ? `<h6>מאיפה הנקודות <span>תחזית למשחק</span></h6><div>${bd}</div>` : ""}
         <h6>שורה סטטיסטית למשחק</h6>
         <table class="cd-t"><tr><th></th><th class="num">נק'</th><th class="num">ריב'</th><th class="num">אס'</th><th class="num">חט'</th><th class="num">חס'</th><th class="num">איב'</th><th class="num">3</th><th class="num">דק'</th></tr>${line("תחזית", p.pl)}${line("עונה שעברה", p.ll, true)}</table>
