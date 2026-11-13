@@ -988,7 +988,7 @@ async function cardLog(p, season){
   // the next games of his team, on top of the log (Nati, 14.11.2026): to pick him up for a given day.
   // The forecast is the learned one from all his games so far (blendM); the tip-off time in Israel when ESPN's day is loaded
   const team = teamOf(p.id), today = todayUS(), played = new Set(games.map(g => g.date));
-  const nextG = sel === cur && team && team !== "FA" && SEA.sch ? SEA.sch.games.filter(g => (g.home.team === team || g.away.team === team) && g.date >= today && g.status !== "complete" && !played.has(g.date)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3) : [];
+  const nextG = sel === cur && team && team !== "FA" && SEA.sch ? SEA.sch.games.filter(g => (g.home.team === team || g.away.team === team) && g.date >= today && g.status !== "complete" && !played.has(g.date)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 1) : [];
   await Promise.all(nextG.map(g => loadDay(g.date, 30 * 60e3).catch(() => null)));
   if (request !== cardLogRequest || CARDH.pid !== p.id || !$("card").open) return;
   let nextFc = p.fpg || 0;
