@@ -985,7 +985,19 @@ async function cardLog(p, season){
     }
     if (predictions.size) review = `<div class="cd-review"><b>דיוק בנקודות פנטזי</b><p>טעות ממוצעת במשחק · מודל לומד <strong>${f1(modelError / predictions.size)}</strong> · קדם־עונה <strong>${f1(baselineError / predictions.size)}</strong></p><small>שחזור על ${predictions.size} משחקים עד אתמול. לכל משחק חושבה תחזית לפי המשחקים שקדמו לו ובסיס התחזית שזמין היום.</small></div>`;
   }
-  const rows = games.slice(-8).reverse().map(g => { const st = g.s, c = g.fp >= ref * 1.15 ? "hi" : g.fp <= ref * 0.8 ? "lo" : "";
+  // the next games of his team, on top of the log (Nati, 14.11.2026): to pick him up for a given day.
+  // The forecast is the learned one from all his games so far (blendM); the tip-off time in Israel when ESPN's day is loaded
+  const team = teamOf(p.id), today = todayUS(), played = new Set(games.map(g => g.date));
+  const nextG = sel === cur && team && team !== "FA" && SEA.sch ? SEA.sch.games.filter(g => (g.home.team === team || g.away.team === team) && g.date >= today && g.status !== "complete" && !played.has(g.date)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3) : [];
+  await Promise.all(nextG.map(g => loadDay(g.date, 30 * 60e3).catch(() => null)));
+  if (request !== cardLogRequest || CARDH.pid !== p.id || !$("card").open) return;
+  let nextFc = p.fpg || 0;
+  if (isCur) { const h = []; games.forEach(g => { if (g.date < today) h.push(gameOf(g.fp, g.s.sp, g.s)); }); nextFc = blendM(p.fpg, p.sd || 4, p.pl, h).m; }
+  const ilT = ms => new Date(ms).toLocaleTimeString("he-IL", {timeZone: "Asia/Jerusalem", hour: "2-digit", minute: "2-digit"});
+  const injN = injOf(p.id), outN = injN && isOut(injN);
+  const nextRows = nextG.slice().reverse().map((g, k, a) => { const home = g.home.team === team, opp = home ? g.away.team : g.home.team, tp = tipOf(team, g.date), first = k === a.length - 1;
+    return `<tr class="cdnx${first ? " cdnx1" : ""}"><td>${wd(g.date)}${first ? ` <span class="nxt">${g.date === today ? "היום" : "הבא"}</span>` : ""}</td><td dir="ltr">${home ? "" : "@"}${esc(opp)}</td><td colspan="4" class="dim">${tp && tp.t ? `${ilT(tp.t)} שעון ישראל` : ""}${outN ? `${tp && tp.t ? " · " : ""}<span class="bad">${esc(injTxt(injN))}</span>` : ""}</td><td class="hide-sm"></td><td class="hide-sm"></td><td class="hide-sm"></td>${isCur ? `<td class="num">${f1(nextFc)}</td>` : ""}<td class="num dim">עוד לא</td></tr>`; }).join("");
+  const rows = nextRows + games.slice(-8).reverse().map(g => { const st = g.s, c = g.fp >= ref * 1.15 ? "hi" : g.fp <= ref * 0.8 ? "lo" : "";
     return `<tr><td>${wd(g.date)}</td><td dir="ltr">${g.away ? "@" : ""}${esc(g.opp)}</td><td class="num">${Math.round(g.min)}</td>${["pts", "reb", "ast"].map(k => `<td class="num">${st[k] || 0}</td>`).join("")}<td class="num hide-sm">${st.stl || 0}</td><td class="num hide-sm">${st.blk || 0}</td><td class="num hide-sm">${st.to || 0}</td>${isCur ? `<td class="num">${predictions.has(g) ? f1(predictions.get(g)) : "—"}</td>` : ""}<td class="num sc2 ${c}"><b>${f1(g.fp)}</b></td></tr>`; }).join("");
   box.innerHTML = `${head}${chart}${strip}${review}
     <div class="cd-log"><table class="cd-t"><tr><th>תאריך</th><th>יריב</th><th class="num">דק'</th><th class="num">נק'</th><th class="num">ריב'</th><th class="num">אס'</th><th class="num hide-sm">חט'</th><th class="num hide-sm">חס'</th><th class="num hide-sm">איב'</th>${isCur ? '<th class="num">צפי משוחזר</th>' : ""}<th class="num">בפועל</th></tr>${rows}</table></div>

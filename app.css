@@ -1024,3 +1024,8 @@ body.app2 #card.cd2::backdrop{background:#000000a6}
 #card.cd2 .cd-news time{color:var(--tx3);white-space:nowrap}
 #card.cd2 .cd-inj summary{cursor:pointer;color:var(--tx3);font-size:11.5px}
 #card.cd2 .cd-inj details p{margin-top:4px}
+/* the card's next games, on top of the log (14.11.2026) */
+#card.cd2 .cd-log tr.cdnx td{background:var(--s2);color:var(--tx2)}
+#card.cd2 .cd-log tr.cdnx1 td{background:var(--today);color:var(--tx)}
+#card.cd2 .cd-log tr.cdnx .nxt{display:inline-block;margin-inline-start:6px;padding:0 6px;border-radius:6px;font-size:10.5px;font-weight:700;background:#c6f432;color:#1a1a1a}
+#card.cd2 .cd-log tr.cdnx .bad{color:#d64545;font-weight:700}
