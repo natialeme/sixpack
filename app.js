@@ -63,6 +63,20 @@ function aRow(a){
   return `<div class="it">${aWho(a)}<div class="tx" title="${esc(strip(a.body))}"><b>${strip(a.title)}</b><small>${small}</small></div>
     ${a.due ? `<span class="dl ${soon ? "now" : ""}">${xi("clock")}${a.due.live ? "משחק עכשיו" : esc(a.due.txt)}</span>` : ""}${aActs(a, "lime")}</div>`;
 }
+function openRoleMarket(){
+  Object.assign(SEA.fa,{role:true, healthy:true, q:"", pos:"ALL", watch:false});
+  setTab("fa");
+  setPT("fa","free");
+}
+function compactAlerts(list){
+  const roles = list.filter(a => a.id.startsWith("role|"));
+  if (!roles.length) return list;
+  const summary = {id:"role-summary", kind:"fa", pri:3, ic:"trend",
+    title:"שינוי דקות אצל "+roles.length+" שחקנים פנויים",
+    body:roles.slice(0,3).map(a => a.title.replace(/^למעקב: /,"")).join(" · "),
+    act:[{t:"לרשימה",fn:"openRoleMarket()"}]};
+  return [...list.filter(a => !a.id.startsWith("role|")), summary];
+}
 function aGroups(list){
   const groups = [];
   list.forEach(a => { const [g, ic] = AGRP(a); let G = groups.find(x => x.g === g); if (!G) groups.push(G = {g, ic, list: []}); G.list.push(a); });
@@ -82,7 +96,7 @@ function renderAlertsPop(){
     : lastCleared && lastCleared.length ? `<button class="btn" type="button" onclick="undoClearAll()">ביטול הניקוי</button>` : "";
   $("alertsPop").innerHTML = `<div class="paper apw">
     <div class="bh"><h2>התראות</h2><span class="meta">${list.length ? `${list.length} פתוחות` : "אין התראות פתוחות"}</span>${n1 ? `<span class="chip red">${n1} דחופים</span>` : ""}${n2 ? `<span class="chip amb">${n2} לבדוק</span>` : ""}<span class="sp"></span>${clr}<button class="x" type="button" aria-label="סגירה" onclick="closeAlertsPop()">${IC.x}</button></div>
-    <div class="apl">${list.length ? aGroups(list) : `<p class="mut ape">${SEA.d ? "הכל מסודר. כשיהיה משחק לנעול, שינוי להרכב או החתמה ששווה לעשות, זה יופיע כאן." : "מושך את השבוע מ-Sleeper…"}</p>`}</div>
+    <div class="apl">${list.length ? aGroups(compactAlerts(list)) : `<p class="mut ape">${SEA.d ? "הכל מסודר. כשיהיה משחק לנעול, שינוי להרכב או החתמה ששווה לעשות, זה יופיע כאן." : "מושך את השבוע מ-Sleeper…"}</p>`}</div>
     <div class="apf">${inSeason() ? lockSyncChip().replace(' id="lockSync"', "") : ""}${nt}<span class="sp"></span><button class="lnk" type="button" onclick="closeAlertsPop();setTab('week')">למסך "השבוע שלי"</button></div></div>`;
 }
 // the phone's state is drawn in three places now: "מה לעשות עכשיו", the popover and the settings
@@ -254,7 +268,7 @@ function renderWeek(){
   } else html.push(`<section class="blk lm"><div class="bh"><h2>המאץ'</h2></div><p class="mut">אין מאץ'אפ לשבוע ${D.week} עדיין.</p></section>`);
 
   // ---- the next thing to do (lime) ----
-  const alerts = openAlerts(), first = alerts[0];
+  const alerts = compactAlerts(openAlerts()), first = alerts[0];
   if (first) {
     const due = first.due, slot = /^empty\|\d+\|(\d+)$/.exec(first.id);
     let art = "", txt = strip(first.body).slice(0, 120), cls = "";
@@ -283,8 +297,9 @@ function renderWeek(){
   }
   // the queue stands alone only when there is one: an empty block of 599×848 was the first finding of the redesign
   if (alerts.length > 1) {
-    const n1 = alerts.filter(a => a.pri === 1).length, n2 = alerts.filter(a => a.pri === 2).length;
-    html.push(`<section class="blk s12 dk-only" id="q" aria-label="מה לעשות עכשיו"><div class="bh"><h2>מה לעשות עכשיו</h2>${n1 ? `<span class="chip red">${n1} דחופים</span>` : ""}${n2 ? `<span class="chip amb">${n2} לבדוק</span>` : ""}<span class="sp"></span>${lockSyncChip()}</div>${aGroups(alerts.slice(1))}</section>`);
+    const queue = alerts.slice(1);
+    const n1 = queue.filter(a => a.pri === 1).length, n2 = queue.filter(a => a.pri === 2).length;
+    html.push(`<section class="blk s5 dk-only" id="q" aria-label="מה לעשות עכשיו"><div class="bh"><h2>מה לעשות עכשיו</h2>${n1 ? `<span class="chip red">${n1} דחופים</span>` : ""}${n2 ? `<span class="chip amb">${n2} לבדוק</span>` : ""}<span class="sp"></span>${lockSyncChip()}</div>${aGroups(queue.slice(0,3))}${queue.length>3 ? `<details><summary>${queue.length === 4 ? "פעולה נוספת" : "עוד "+(queue.length-3)+" פעולות"}</summary>${aGroups(queue.slice(3))}</details>` : ""}</section>`);
   }
 
   // ---- the phone: one list for everything to do. Locks first, soonest deadline lit, each with its three buttons on one
@@ -327,7 +342,7 @@ function renderWeek(){
       return `<article class="lgc${nxt || isLive ? " next" : ""}"><header><span class="t n">${G.tip ? (isLive ? "חי" : ilTime(G.tip.t, false)) : "·"}</span>${isLive ? `<span class="chip live"><i></i>משחק עכשיו</span>` : nxt ? `<span class="chip now">הראשון שלך</span>` : ""}</header>
         <div class="lvs"><div class="ltt">${tlI(G.away)}<b>${esc(G.away)}</b><small class="n">${esc(rec(G.away))}</small></div><span class="at">@</span><div class="ltt">${tlI(G.home)}<b>${esc(G.home)}</b><small class="n">${esc(rec(G.home))}</small></div></div>
         ${G.me.map(mineRow).join("")}${G.op.length ? `<div class="lop"><span>יריב</span>${G.op.map(x => hsI(x.id, 24)).join("")}</div>` : ""}</article>`; };
-    html.push(`<section class="blk s12 dk-only" aria-label="הלילה"><div class="bh"><h2>${T.day === today ? "הלילה" : `המשחקים הבאים · ${dLbl(T.day)}`}</h2><span class="meta">שעון ישראל · ${startedG} משחקים עם מתחילים שלך · אצלך ${myOn} בהרכב, אצלו ${opOn}</span><span class="sp"></span><a href="#" onclick="setTab('news');return false">כל המשחקים ←</a></div>
+    html.push(`<section class="blk ${alerts.length > 1 ? "s7" : "s12"} dk-only" aria-label="הלילה"><div class="bh"><h2>${T.day === today ? "הלילה" : `המשחקים הבאים · ${dLbl(T.day)}`}</h2><span class="meta">שעון ישראל · ${startedG} משחקים עם מתחילים שלך · אצלך ${myOn} בהרכב, אצלו ${opOn}</span><span class="sp"></span><a href="#" onclick="setTab('news');return false">כל המשחקים ←</a></div>
       ${shown.length ? `<div class="lgcs">${shown.map(card).join("")}</div>` : `<p class="mut">אין לך שחקנים במשחקים של ${dLbl(T.day)}.</p>`}
       ${mineR.length > 5 ? `<div style="text-align:center;margin-top:12px"><button class="btn" onclick="SEA.wkAllG=!SEA.wkAllG;renderWeek()">${SEA.wkAllG ? "פחות" : `עוד ${mineR.length - 5} משחקים עם שחקנים שלך`}</button></div>` : ""}</section>`);
     // the phone: a row for each game, your player and his bar after the game; the later games fold into one line
@@ -916,7 +931,7 @@ function openCardSeason(id){
   $("cardBody").innerHTML = `
     <div class="cd-top">
       <div class="cd-h">${pfr(id, 112, 112, team)}
-        <div class="cd-t"><div class="cd-nm">${esc(p.n)}<span class="cd-vmini n">${f1(val)}</span></div>
+        <div class="cd-identity"><div class="cd-nm">${esc(p.n)}<span class="cd-vmini n">${f1(val)}</span></div>
           <div class="cd-meta">${team && team !== "FA" ? tlI(team) : ""}${sub}</div><div class="cd-chips">${chips}</div></div>
         <button class="cd-x" type="button" aria-label="סגירה" onclick="$('card').close()">${IC.x}</button></div>
       <div class="cd-hero">
@@ -936,7 +951,7 @@ function openCardSeason(id){
         <div class="cd-wkd"><div class="cd-injw">${injBox}${newsBox}</div>${wkBox}</div>
         ${parts.length ? `<h6>מאיפה הנקודות <span>תחזית למשחק</span></h6><div>${bd}</div>` : ""}
         <h6>שורה סטטיסטית למשחק</h6>
-        <table class="cd-t"><tr><th></th><th class="num">נק'</th><th class="num">ריב'</th><th class="num">אס'</th><th class="num">חט'</th><th class="num">חס'</th><th class="num">איב'</th><th class="num">3</th><th class="num">דק'</th></tr>${line("תחזית", p.pl)}${line("עונה שעברה", p.ll, true)}</table>
+        <div class="cd-table-scroll"><table class="cd-t"><tr><th></th><th class="num">נק'</th><th class="num">ריב'</th><th class="num">אס'</th><th class="num">חט'</th><th class="num">חס'</th><th class="num">איב'</th><th class="num">3</th><th class="num">דק'</th></tr>${line("תחזית", p.pl)}${line("עונה שעברה", p.ll, true)}</table></div>
         ${calcHtml(p)}</section></div>
     <div class="cd-f paper"><button class="btn lt" type="button" onclick="toggleStar('${id}')">${xi("star", 14)}${isStar(id) ? "ברשימת המעקב" : "לרשימת המעקב"}</button><span class="sp"></span>
       <a class="btn ${fa ? "lime" : ""}" href="${SLEEPER_URL}" target="_blank" rel="noopener">${fa ? "להחתים ב-Sleeper" : "Sleeper"} ${xi("ext", 13)}</a></div>`;

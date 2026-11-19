@@ -812,7 +812,7 @@ body.app2 #card.cd2::backdrop{background:#000000a6}
 #card.cd2 .cd-top{position:relative;display:flex;align-items:stretch;flex:none;border-bottom:1px solid var(--ln);background:linear-gradient(to left,color-mix(in srgb,var(--ac) 13%,transparent),transparent 62%)}
 #card.cd2 .cd-h{display:flex;align-items:center;gap:18px;padding:16px 22px;flex:0 0 372px;min-width:0}
 #card.cd2 .cd-h .pf{border-color:color-mix(in srgb,var(--ac) 55%,#3a3a42)}
-#card.cd2 .cd-t{min-width:0;flex:1}
+#card.cd2 .cd-identity{min-width:0;flex:1}
 #card.cd2 .cd-nm{display:flex;align-items:baseline;gap:12px;font-size:28px;font-weight:800;line-height:1.1}
 #card.cd2 .cd-vmini{display:none;font-size:20px;color:var(--ac)}
 #card.cd2 .cd-meta{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;color:var(--tx2);font-size:13px;margin-top:6px}
@@ -1029,3 +1029,41 @@ body.app2 #card.cd2::backdrop{background:#000000a6}
 #card.cd2 .cd-log tr.cdnx1 td{background:var(--today);color:var(--tx)}
 #card.cd2 .cd-log tr.cdnx .nxt{display:inline-block;margin-inline-start:6px;padding:0 6px;border-radius:6px;font-size:10.5px;font-weight:700;background:#c6f432;color:#1a1a1a}
 #card.cd2 .cd-log tr.cdnx .bad{color:#d64545;font-weight:700}
+
+.sx #q{align-self:start;min-width:0}
+.sx #q .it{flex-wrap:wrap;gap:6px;padding-block:8px}
+.sx #q .it .tx{min-width:9rem;flex:1 1 10rem}
+.sx #q .it .btn{white-space:nowrap}
+.sx #q summary{cursor:pointer;padding-block:8px;font-weight:600}
+#card.cd2 .cd-chips{align-items:center}
+#card.cd2 .cd-chips .chip{box-sizing:border-box;display:inline-flex;align-items:center;min-height:0;height:auto;line-height:1.35;padding:3px 7px}
+#card.cd2 .cd-f .btn{box-sizing:border-box;flex:0 0 auto;flex-flow:row nowrap;justify-content:center;white-space:nowrap;line-height:1.2}
+#card.cd2 .cd-f .btn svg{flex:none}
+@media(max-width:820px){
+  body.app2 #card.cd2{max-width:100%;margin:0;inset:0}
+  #card.cd2 #cardBody{overflow-y:auto;overscroll-behavior:contain;display:flex}
+  #card.cd2 .cd-h{position:relative;padding-inline-end:48px}
+  #card.cd2 .cd-nm{flex-wrap:wrap;overflow-wrap:anywhere}
+  #card.cd2 .cd-strip{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #card.cd2 .cd-sumwrap,#card.cd2 .cd-body{overflow:visible}
+  #card.cd2 .cd-f{position:sticky;bottom:0;z-index:2;padding-bottom:max(10px,env(safe-area-inset-bottom));background:var(--s2)}
+  #card.cd2 .cd-f .btn{height:40px;padding-inline:10px}
+  #card.cd2 .cd-table-scroll,#card.cd2 .cd-log{max-width:100%;overflow-x:auto}
+}
+@media(max-width:400px){
+  #card.cd2 table.cd-t :is(td,th){padding-inline:3px}
+  #card.cd2 .cd-wk{flex-wrap:wrap}
+  #card.cd2 .cd-wk div{min-width:52px}
+}
+
+.sx #q .it{min-height:0}
+.sx #q .grp{padding-block:6px 2px}
+@media(max-width:820px){
+  #card.cd2 #cardBody > :is(.cd-hero,.cd-sumwrap,.cd-body){flex:none}
+  #card.cd2 .cd-f{margin-top:auto}
+  .sx #xFa .lnk, #xFa .lnk{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+}
+@media(max-width:360px){
+  #card.cd2 .cd-log :is(td,th){white-space:normal;line-height:1.25}
+  #card.cd2 .cd-log .nxt{display:block;width:fit-content;margin:1px 0}
+}
