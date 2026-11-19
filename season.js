@@ -41,9 +41,9 @@ function ilTime(t, withDay = true){
 const phi = z => Math.exp(-z * z / 2) / Math.sqrt(2 * Math.PI);
 function Phi(z){ const t = 1 / (1 + 0.2316419 * Math.abs(z)), d = phi(z) * t * (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429)))); return z > 0 ? 1 - d : d; }
 // V[k] = expected locked score with k games still to come, playing the best stopping rule: lock the latest game if it beats V[k]
-function lockV(m, sd, n = 6){
-  const V = [0, m];
-  for (let k = 2; k <= n; k++) { const c = V[k - 1], z = (m - c) / sd; V.push(m * Phi(z) + sd * phi(z) + c * (1 - Phi(z))); }
+function lockV(m, sd, n = 6, means = []){
+  const V = [0, means.at(-1) ?? m];
+  for (let k = 2; k <= n; k++) { const c = V[k - 1], mu = means.at(-k) ?? m, z = (mu - c) / sd; V.push(mu * Phi(z) + sd * phi(z) + c * (1 - Phi(z))); }
   return V;
 }
 // m learns from this season (24.10.2026). Minutes and each stat per minute are blended on their own with every game he
@@ -99,15 +99,15 @@ async function fetchSeason(force){
       getJSON(`${SAPI}/projections/nba/${season}/${week}?season_type=regular`),
       getJSON(`${SAPI}/stats/nba/${season}/${week}?season_type=regular`),
       getJSON(`${API}/players/nba/trending/add?lookback_hours=24&limit=50`).catch(() => []),
-      getJSON(`${API}/league/${lid}/transactions/${week}`).catch(() => []),
-      week > 1 ? getJSON(`${API}/league/${lid}/transactions/${week - 1}`).catch(() => []) : Promise.resolve([]),
+      getJSON(`${API}/league/${lid}/transactions/${week}`).catch(() => null),
+      week > 1 ? getJSON(`${API}/league/${lid}/transactions/${week - 1}`).catch(() => null) : Promise.resolve([]),
       getJSON(`${SAPI}/projections/nba/${season}/${week + 1}?season_type=regular`).catch(() => []),
       ASOF ? Promise.resolve(null) : loadLegs(lid, week),
       loadSchedule(season), pPlayers,
     ]);
     if (!Array.isArray(matchups) || !Array.isArray(stats) || !Array.isArray(proj)) throw new Error("התקבלו נתוני שבוע לא תקינים");
     const reads = readMatchups(lid, week, matchups);     // the other reads of the matchups, while the rest loads
-    SEA.d = {state, lg, users, rosters, week, season, matchups, proj, stats, trend, tx: [...tx0, ...tx1], nextProj, legs};
+    SEA.d = {state, lg, users, rosters, week, season, matchups, proj, stats, trend, txOk: !!(tx0 && tx1), tx: [...(tx0 || []), ...(tx1 || [])], nextProj, legs};
     SEA.at = Date.now(); SEA.err = null; HIST.memo = null;
     // the past weeks before the alerts: every bar's m counts his games from them (blendM)
     await loadHistory(SEA.d);
@@ -465,7 +465,11 @@ function pState(id, Wm, mp, week){
   const fpg = p.fpg || mean((Wm.pj[id] || []).map(x => x.fp)) || 1;
   const games = [...pastGames(id, week), ...played.map(x => gameOf(x.fp, Wm.sl[id][x.date].sp, Wm.sl[id][x.date]))];
   const {m, sd, minutes} = blendM(fpg, p.sd || Math.max(4, 0.3 * fpg), p.pl, games);
-  const V = lockV(m, sd);
+  const means = left.map(g => {
+    const projection = (Wm.pj[id] || []).find(row => row.date === g.date && row.min > 0);
+    return projection && !ASOF ? (m + projection.fp) / 2 : m;
+  });
+  const V = lockV(m, sd, left.length, means);
   const lastFp = played.length ? played[played.length - 1].fp : null;
   let pts = mp && mp.players_points && mp.players_points[id] != null ? mp.players_points[id] : null;
   if (ASOF || pts == null) pts = lastFp;
@@ -645,6 +649,7 @@ const adjL = p => adj(liveP(p));
 // why his name is worth a look: shown beside it, not part of the value
 function faWhy(x){
   const f = x.form, last = lastName(x.p.n), out = [];
+  if (x.role) out.push("שינוי תפקיד: +" + Math.round(x.role.delta) + " דק׳" + (x.role.confirmed ? " · חיזוק בתחזית" : ""));
   if (x.hot) out.push(`ברצף: ${f1(f.l3)} ב-3 אחרונים`);
   if (x.actualMin && x.actualMin.rising) out.push("דקות עולות");
   if (f.fga != null && f.fga >= 15) out.push(`${Math.round(f.fga)} זריקות למשחק`);
@@ -655,17 +660,26 @@ function faWhy(x){
 function freeAgents(D, Wm, mineT){
   const rostered = new Set(D.rosters.flatMap(r => [...(r.players || []), ...(r.reserve || [])]));
   const trend = Object.fromEntries((D.trend || []).map(t => [t.player_id, t.count]));
-  const now = ASOF ? dObj(ASOF).getTime() : Date.now(), clear = (D.lg.settings.waiver_clear_days || 2) * DAY;
+  const now = ASOF ? dObj(ASOF).getTime() : Date.now(), clear = (D.lg.settings.waiver_clear_days ?? 2) * DAY;
   const waivers = {};
-  D.tx.filter(t => t.status === "complete" && t.drops).forEach(t => Object.keys(t.drops).forEach(id => { if (now - t.created < clear) waivers[id] = Math.max(waivers[id] || 0, t.created + clear); }));
+  D.tx.filter(t => t.status === "complete" && t.drops).forEach(t => Object.keys(t.drops).forEach(id => { const at = t.status_updated || t.created; if (now - at < clear) waivers[id] = Math.max(waivers[id] || 0, at + clear); }));
   const mineAll = mineT ? [...mineT.st.filter(Boolean), ...mineT.bench] : [];
   const worst = mineAll.filter(x => !x.p.stub).sort((a, b) => formOf(a.p).fc - formOf(b.p).fc)[0] || null;
   const worstFc = worst ? formOf(worst.p).fc : 0;
+  const nextWeek = SEA.sch.games.filter(g => g.week === D.week + 1);
   const list = B.players.filter(p => !rostered.has(p.id)).map(p => {
     const team = teamOf(p.id), sch = Wm.byTeam[team] || [];
-    const left = sch.filter(x => !x.done).length;
+    const available = Math.max(now, waivers[p.id] || 0);
+    const playable = g => !g.live && tipAt(team, g.date) > available;
+    const left = sch.filter(x => !x.done && playable(x)).length;
+    const next = nextWeek.filter(g => [g.home.team,g.away.team].includes(team) && playable(g)).length;
+    const log = seasonLog(p.id), latest = log.at(-1);
+    const nextDate = sch.find(g => !g.done && playable(g))?.date;
+    const nextMinutes = (Wm.pj[p.id] || []).find(g => g.date === nextDate)?.min;
+    const role = latest && dObj(Wm.today) - dObj(latest[0]) <= 7 * DAY ?
+      SixDecisions.role(log.map(g => g[3]/60), p.pl?.min || p.min, nextMinutes) : null;
     const wkMin = mean((Wm.pj[p.id] || []).map(x => x.min)), form = formOf(p);
-    return {p, team, inj: injOf(p.id), left, games: sch.length, next: (Wm.pjN[p.id] || []).length, wkMin, actualMin: actualMinutes(p.id, p), dMin: wkMin && p.min ? wkMin - p.min : 0,
+    return {p, team, inj: injOf(p.id), left, games: sch.length, next, role, wkMin, actualMin: actualMinutes(p.id, p), dMin: wkMin && p.min ? wkMin - p.min : 0,
       trend: trend[p.id] || 0, waiverUntil: waivers[p.id] || null, val: adjL(p), gain: worst ? adjL(p) - adjL(worst.p) : 0,
       form, fc: form.fc, fcGain: worst ? form.fc - worstFc : 0, hot: !!worst && form.ok && form.l3 >= form.fc + 3 && form.l3 >= worstFc + SWAP_MIN && form.m3 >= form.minAll - 2};
   });
@@ -675,32 +689,30 @@ function freeAgents(D, Wm, mineT){
 // add X, drop Y: the gain of the whole roster (best nine plus the bench), so positions count, not only value
 let swapMemo = {key: "", list: []};
 function bestSwaps(X, n = 3){
-  const key = `${SEA.at}|${S.risk}|${Object.keys(HIST.weeks || {}).length}`;
-  if (swapMemo.key === key) return swapMemo.list.slice(0, n);
-  const pool = [...X.me.st.filter(Boolean), ...X.me.bench].filter(x => !x.p.stub);
-  const roster = pool.map(x => liveP(x.p));
-  const all = [];
-  let near = null;
-  if (roster.length) {
-    const base = lineup(roster).total;
-    // a locked player already gave this week's score: he is never the one to drop
-    X.fa.list.filter(c => !isOut(c.inj) && c.val > 0 && c.form.ok).sort((a, b) => b.val - a.val).slice(0, 24).forEach(c => pool.filter(d => !d.locked).forEach(d => {
-      const g = lineup(roster.filter(p => p.id !== d.p.id).concat([liveP(c.p)])).total - base, gap = c.fc - formOf(d.p).fc;
-      if (g <= 0.25) return;
-      if (gap >= SWAP_MIN) all.push({c, d, g, gap});
-      else if (!near || gap > near.gap) near = {c, d, g, gap};
-    }));
+  const roster = [...X.me.st.filter(Boolean), ...X.me.bench];
+  const free = X.D.txOk === false ? [] : X.fa.list.filter(c => c.form.ok && !isOut(c.inj));
+  const slots = X.D.lg.roster_positions.filter(s => !["BN","IR"].includes(s));
+  const value = (p, fc, count) => count ? lockV(fc, p.sd || Math.max(4, fc * 0.3), count)[count] : 0;
+  const nextGames = SEA.sch.games.filter(g => g.week === X.D.week + 1);
+  const pool = roster.map(x => {
+    const i = X.me.st.indexOf(x), live = x.g.some(g => g.live);
+    const next = nextGames.filter(g => [g.home.team,g.away.team].includes(x.team)).length;
+    return {id:x.id, pos:x.p.pos || [], keep:!!(x.locked || x.pending || x.uncertain || live), protect:!!(x.p.stub || isOut(x.inj)),
+      fixed:i >= 0 && (x.lastFp != null || live || x.locked) ? i : -1,
+      remaining:x.V[x.k] || 0, score:[i >= 0 ? x.exp : x.V[x.k] || 0, isOut(x.inj) ? 0 : value(x.p, formOf(x.p).fc, next)]};
+  });
+  const candidates = free.map(c => ({id:c.p.id, pos:c.p.pos || [], fixed:-1,
+    score:[value(c.p,c.fc,c.left), value(c.p,c.fc,c.next)]}));
+  const key = JSON.stringify([slots,pool,candidates]);
+  if (swapMemo.key !== key) {
+    swapMemo = {key, results:SixDecisions.swaps(pool,candidates,slots).slice(0,6)};
   }
-  all.sort((a, b) => b.g - a.g);
-  // each free agent once, paired with the drop that helps most; the same weak player can be the drop for several of them
-  const usedC = new Set(), list = [];
-  for (const s of all) { if (usedC.has(s.c.p.id)) continue; usedC.add(s.c.p.id); list.push(s); if (list.length >= 6) break; }
-  swapMemo = {key, list, near};
-  return list.slice(0, n);
+  return swapMemo.results.slice(0,n).map(r => ({c:free.find(c=>c.p.id===r.add),
+    d:roster.find(d=>d.id===r.drop), g:r.total, thisWeek:r.gains[0], nextWeek:r.gains[1]}));
 }
 
 // the closest move under the bar, for the "nothing worth it" message; call after bestSwaps
-const nearSwap = () => swapMemo.near || null;
+
 
 // everything a season screen needs, built from the last pull
 function seasonState(){
@@ -950,17 +962,13 @@ function computeAlerts(X){
       body: `להכניס ${plan.ins.map(x => `<b>${n(x)}</b> (צפי ${f1(plan.worth(x))})`).join(", ")} במקום ${plan.outs.length ? plan.outs.map(x => `${n(x)} (${why(x)})`).join(", ") : "המשבצת הריקה"}. משחק מהספסל לא נספר ואי אפשר לנעול אותו.`,
       due: {t: plan.at, txt: ilTime(plan.at), live: false}, dueLbl: "לפני שהמשחק הראשון מהם מתחיל", act: [{t: "החלפתי", ack: true}]});
   }
-  // a free agent worth a move: the same rule as daily_alert.py, SWAP_MIN+ a game over my weakest player
-  const bestFA = fa.list.filter(x => !isOut(x.inj) && !x.waiverUntil && x.form.ok).sort((a, b) => b.fcGain - a.fcGain)[0];
-  if (bestFA && fa.worst && bestFA.fcGain >= SWAP_MIN)
-    out.push({id: `fa|${w}|${bestFA.p.id}`, pri: 2, kind: "fa", ic: "trend", pid: bestFA.p.id, title: `להחתים את ${esc(bestFA.p.n)}`,
-      body: `שווה ${sg(bestFA.fcGain)} למשחק יותר מ-${n(fa.worst)}, הכי חלש אצלך. ${bestFA.left ? `${bestFA.left} משחקים שנשארו לו השבוע` : "בלי משחקים השבוע"}.`,
-      act: [{t: "לשוק", fn: "setTab('fa')"}, {t: "לא עכשיו", ack: true}]});
-  // a free agent on a run that would beat my weakest player, each one once a week
-  fa.list.filter(x => x.hot && !isOut(x.inj) && !x.waiverUntil && x !== bestFA).sort((a, b) => b.form.l3 - a.form.l3).slice(0, 2).forEach(x =>
-    out.push({id: `hot|${w}|${x.p.id}`, pri: 2, kind: "fa", ic: "trend", pid: x.p.id, title: `${esc(x.p.n)} ברצף, והוא פנוי`,
-      body: `${f1(x.form.l3)} בממוצע ב-3 המשחקים האחרונים, ${Math.round(x.form.m3)} דקות. ${n(fa.worst)}, הכי חלש אצלך, על ${f1(formOf(fa.worst.p).fc)} למשחק.`,
-      act: [{t: "לשוק", fn: "setTab('fa')"}, {t: "לא עכשיו", ack: true}]}));
+  const pick = bestSwaps(X,1)[0];
+  if (pick) out.push({id:"fa|"+w+"|"+pick.c.p.id+"|"+pick.d.id, pri:2, kind:"fa", ic:"trend", pid:pick.c.p.id,
+    title:esc(pick.c.p.n)+" במקום "+n(pick.d), body:"השבוע "+sg(pick.thisWeek)+" · בשבוע הבא "+sg(pick.nextWeek),
+    act:[{t:"לשוק",fn:"setTab('fa')"},{t:"לא עכשיו",ack:true}]});
+  for (const x of fa.list.filter(x=>x.role && !isOut(x.inj))) out.push({
+    id:"role|"+w+"|"+x.p.id, pri:3, kind:"fa", ic:"trend", pid:x.p.id, title:"למעקב: "+esc(x.p.n),
+    body:faWhy(x)[0], act:[{t:"לשוק",fn:"setTab('fa')"},{t:"טיפלתי",ack:true}]});
   // watchlist
   (S.faWatch || []).forEach(id => {
     if (out.some(a => a.pid === id)) return;      // already an alert to sign him
@@ -1287,7 +1295,7 @@ function renderFA(){
   const sw = bestSwaps(X, 3);
   const seasonTxt = id => { const s = seasonSum(id); return s ? `העונה בפועל: <b class="num">${f1(s.avg)}</b> למשחק (${s.gp})` : "עוד לא שיחק העונה"; };
   const swCard = (s, i) => { const d = s.d;
-    return `<section class="panel sw-c"><div class="ph"><h2>החלפה ${i + 1}</h2><span class="meta"><b class="num good">${sg(s.g)}</b> לשבוע לסגל</span></div>
+    return `<section class="panel sw-c"><div class="ph"><h2>החלפה ${i + 1}</h2><span class="meta"><b class="num good">${sg(s.g)}</b> להרכב בשבועיים</span></div>
       <div class="sw">
       <div class="sw-p in"><span class="tag in">להחתים</span>${av(s.c.p, 44)}<div><b>${nameLink(s.c.p)}</b><span>${esc(s.c.team)} · ${(s.c.p.pos || []).join("/")} · ${f1(s.c.val)} לשבוע</span><span class="sw-act">${seasonTxt(s.c.p.id)}</span>
         <span class="sw-tags">${injBadge(s.c.inj)}${s.c.waiverUntil ? `<span class="ib q">waivers</span>` : ""}${s.c.trend ? `<span class="ib">${s.c.trend.toLocaleString("en-US")} הוסיפו</span>` : ""}</span></div></div>
@@ -1307,18 +1315,19 @@ function renderFA(){
 
   // ---- the list ----
   const posOk = x => F.pos === "ALL" || (x.p.pos || []).some(q => (ELIG[F.pos] || [F.pos]).includes(q));
-  let list = fa.list.filter(x => posOk(x) && (!F.healthy || !isOut(x.inj)) && (!F.watch || watch.has(x.p.id)));
+  let list = fa.list.filter(x => posOk(x) && (!F.role || x.role) && (!F.healthy || !isOut(x.inj)) && (!F.watch || watch.has(x.p.id)));
   const actual = x => { const s = seasonSum(x.p.id); return s ? s.avg : -1; };
   const key = {gain: x => x.gain, val: x => x.val, fpg: x => x.fc, avg: actual, left: x => x.left * 100 + x.val, next: x => x.next * 100 + x.val, min: x => x.dMin, trend: x => x.trend}[F.sort] || (x => x.gain);
   list.sort((a, b) => F.dir * (key(a) - key(b)));
   const total = list.length;
   list = list.slice(0, 50);
-  const chips = ["ALL", "G", "F", "C"].map(k => `<button class="${F.pos === k ? "sel" : ""}" onclick="SEA.fa.pos='${k}';renderFA()">${k === "ALL" ? "הכל" : k}</button>`).join("");
+  const chips = ["ALL", "G", "F", "SF", "PF", "C"].map(k => `<button class="${F.pos === k ? "sel" : ""}" onclick="SEA.fa.pos='${k}';renderFA()">${k === "ALL" ? "הכל" : k}</button>`).join("");
   const arrow = `<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="${F.dir < 0 ? "m6 9 6 6 6-6" : "m18 15-6-6-6 6"}"/></svg>`;
   const th = (k, t, cls = "", tip = "") => `<th class="${cls} ${F.sort === k ? "sorted" : ""}" ${tip ? `title="${esc(tip)}"` : ""} aria-sort="${F.sort === k ? (F.dir < 0 ? "descending" : "ascending") : "none"}"><button class="th-s" onclick="sortFA('${k}')">${t}${F.sort === k ? arrow : ""}</button></th>`;
   const table = `<section class="panel fa-list">
     <div class="ph"><h2>שחקנים פנויים</h2><span class="meta">${total} שחקנים · מול ${fa.worst ? esc(fa.worst.p.n) : "—"}, הכי חלש אצלך</span><span class="ph-act"><a class="btn sm" href="${SLEEPER_URL}" target="_blank" rel="noopener">${ric("ext")}Sleeper</a></span></div>
     <div class="fa-tools"><div class="seg-pos">${chips}</div>
+      <label class="chk"><input type="checkbox" ${F.role ? "checked" : ""} onchange="SEA.fa.role=this.checked;renderFA()"> שינוי תפקיד</label>
       <label class="chk"><input type="checkbox" ${F.healthy ? "checked" : ""} onchange="SEA.fa.healthy=this.checked;renderFA()"> בלי פצועים</label>
       <label class="chk"><input type="checkbox" ${F.watch ? "checked" : ""} onchange="SEA.fa.watch=this.checked;renderFA()"> רק במעקב (${watch.size})</label></div>
     <div class="tablewrap"><table class="std dt">
