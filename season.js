@@ -493,6 +493,14 @@ function pState(id, Wm, mp, week){
     if (hit && ok) { locked = true; lockedOn = hit.date; }
     else if (hit) { pending = {date: hit.date, fp: pts}; pts = lastFp; }
   }
+  // The real locks of Sleeper's GraphQL come first, then Nati's own press on a score (below) wins over them (21.11.2026:
+  // the press on a number marks the lock and pressing again cancels it, also while GraphQL answers).
+  if (LG) {
+    const ld = LG[id] != null ? Wm.gid[String(LG[id])] : null, hit = ld ? played.find(x => x.date === ld) : null;
+    if (hit) { locked = true; lockedOn = hit.date; pts = hit.fp; }
+    else { locked = false; lockedOn = null; if (!g.some(x => x.live)) pts = played.length ? lastFp : null; }
+    pending = null;
+  }
   // An explicit date selects that completed game, overriding both conflicting API scores
   // and automatic lock inference. A date absent from played games cannot create a lock.
   const mark = S.locks?.[week]?.[id] ?? null;
@@ -503,12 +511,6 @@ function pState(id, Wm, mp, week){
   if (mark === true && !locked) { locked = true; const hit = pts != null && played.find(x => Math.abs(x.fp - pts) < 0.05); if (hit) lockedOn = hit.date; }
   if (mark === false) { locked = false; lockedOn = null; pts = lastFp; pending = null; }
   if (locked) pending = null;
-  if (LG) {
-    const ld = LG[id] != null ? Wm.gid[String(LG[id])] : null, hit = ld ? played.find(x => x.date === ld) : null;
-    if (hit) { locked = true; lockedOn = hit.date; pts = hit.fp; }
-    else { locked = false; lockedOn = null; if (!g.some(x => x.live)) pts = played.length ? lastFp : null; }
-    pending = null;
-  }
   const out = isOut(inj);
   const k = out ? 0 : left.length;
   const exp = locked ? (pts || 0) : !k ? (pts || 0) : lastFp != null ? Math.max(lastFp, V[k]) : V[k];
