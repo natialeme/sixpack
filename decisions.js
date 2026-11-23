@@ -66,7 +66,7 @@ const SixDecisions = (() => {
     for (const c of candidates) {
       let best = null;
       for (const d of pool) {
-        if (d.keep || d.protect) continue;
+        if (d.keep || d.protect || (c.actual != null && d.actual != null && c.actual <= d.actual)) continue;
         const roster = pool.filter(r=>r!==d).concat(c);
         const after = [0,1].map(i=>starters(roster,slots,i));
         const gains = after.map((v,i)=>v.total-base[i].total), total = gains[0]+gains[1];

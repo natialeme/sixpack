@@ -507,7 +507,7 @@ function renderFA(){
     main.push(`<section class="blk dk-only" aria-label="ההחלפה הכי טובה"><div class="bh"><h2>ההחלפה הכי טובה</h2><span class="meta">השבוע והשבוע הבא</span><span class="sp"></span>${sw.length > 1 ? `<div class="seg">${sw.map((_, k) => `<button class="${k === i ? "on" : ""}" onclick="SEA.fa.swI=${k};renderFA()" aria-label="החלפה ${k + 1}">${k + 1}</button>`).join("")}</div>` : ""}</div>
       <div class="lswap"><div class="lcut"><img src="${PF(c.p.id)}" alt="" onerror="this.style.visibility='hidden'">${tlI(c.team)}</div>
         <div class="linfo"><div class="lname"><b>${esc(c.p.n)}</b><span class="chip">${esc(c.team)} · ${(c.p.pos || []).join("/")}${c.p.age ? ` · גיל ${c.p.age}` : ""}</span></div>
-          <div class="lstrip" style="margin-top:0"><div><small>ערך שבועי</small><span class="n mdl">${f1(c.val)}</span></div><div><small>תחזית למשחק</small><span class="n mdl">${f1(c.fc)}</span></div><div><small>בפועל</small><span class="n">${avgTxt(c.p.id)}</span></div><div><small>דקות</small><span class="n">${minTxt(c)}</span></div><div><small>השבוע</small><span class="n">${c.left}<em style="font-size:14px;color:var(--tx3)">/${c.games}</em></span></div><div><small>שבוע הבא</small><span class="n">${c.next || "·"}</span></div></div>
+          <div class="lstrip" style="margin-top:0"><div><small>ערך נעילה ל־3 משחקים</small><span class="n mdl">${f1(c.val)}</span></div><div><small>תחזית למשחק</small><span class="n mdl">${f1(c.fc)}</span></div><div><small>בפועל</small><span class="n">${avgTxt(c.p.id)}</span></div><div><small>דקות</small><span class="n">${minTxt(c)}</span></div><div><small>השבוע</small><span class="n">${c.left}<em style="font-size:14px;color:var(--tx3)">/${c.games}</em></span></div><div><small>שבוע הבא</small><span class="n">${c.next || "·"}</span></div></div>
           <div class="lout">${hsI(d.id, 52)}<div class="tx"><small>יוצא</small><b>${esc(d.p.n)}</b><small>${esc(d.team)} · ערך ${f1(adjL(d.p))} · בפועל ${avgPlain(d.id)}</small></div><div class="lgain"><span class="n">+${f1(s.g)}</span><small>בשבועיים · פער בערך <span class="n" style="display:inline;font-size:13px;color:var(--tx2);font-weight:700">${gapTxt(c.val - adjL(d.p))}</span><br>השבוע ${gapTxt(s.thisWeek)} · הבא ${gapTxt(s.nextWeek)}</small></div></div>
           <div class="lacts"><a class="btn w" href="${SLEEPER_URL}" target="_blank" rel="noopener">להחתים ב-Sleeper ${xi("ext", 13)}</a><button class="btn" onclick="openCard('${c.p.id}')">כרטיס שחקן</button></div></div></div></section>`);
     // the phone: a framed photo, the gain, six numbers in two rows, who goes out, and the two buttons (design/fa-phone.html)
@@ -515,7 +515,7 @@ function renderFA(){
       <div class="pswt"><span class="pf"><img src="${PF(c.p.id)}" alt="" onerror="this.style.visibility='hidden'">${tlI(c.team)}</span>
         <div class="pswn"><b>${nameLink(c.p)}</b><small>${esc(c.team)} · ${(c.p.pos || []).join("/")}${c.p.age ? ` · גיל ${c.p.age}` : ""}</small></div>
         <div class="pgain"><span class="n">+${f1(s.g)}</span><small>בשבועיים<br>פער בערך <span class="n">${gapTxt(c.val - adjL(d.p))}</span><br>השבוע ${gapTxt(s.thisWeek)} · הבא ${gapTxt(s.nextWeek)}</small></div></div>
-      <div class="pg6"><div><small>ערך שבועי</small><span class="n mdl">${f1(c.val)}</span></div><div><small>תחזית למשחק</small><span class="n">${f1(c.fc)}</span></div><div><small>בפועל</small><span class="n">${avgTxt(c.p.id)}</span></div><div><small>דקות</small><span class="n">${minTxt(c)}</span></div><div><small>השבוע</small><span class="n">${c.left}/${c.games}</span></div><div><small>שבוע הבא</small><span class="n">${c.next || "·"}</span></div></div>
+      <div class="pg6"><div><small>ערך נעילה ל־3 משחקים</small><span class="n mdl">${f1(c.val)}</span></div><div><small>תחזית למשחק</small><span class="n">${f1(c.fc)}</span></div><div><small>בפועל</small><span class="n">${avgTxt(c.p.id)}</span></div><div><small>דקות</small><span class="n">${minTxt(c)}</span></div><div><small>השבוע</small><span class="n">${c.left}/${c.games}</span></div><div><small>שבוע הבא</small><span class="n">${c.next || "·"}</span></div></div>
       <div class="pout"><span class="k">יוצא</span>${hsI(d.id, 34)}<div class="tx"><b>${esc(d.p.n)}</b><small>${esc(d.team)} · ערך ${f1(adjL(d.p))} · בפועל ${avgPlain(d.id)}</small></div></div>
       <div class="pacts p2"><a class="btn pri" href="${SLEEPER_URL}" target="_blank" rel="noopener">להחתים ב-Sleeper ${xi("ext", 14)}</a><button type="button" class="btn" onclick="openCard('${c.p.id}')">כרטיס שחקן</button></div></section>`);
   } else main.push(`<section class="blk" data-pt="swap"><div class="bh"><h2>אין הרמה ששווה עכשיו</h2></div><p class="mut">${X.D.txOk === false ? "נתוני הווייבר חסרים. ההחלפות יחושבו אחרי רענון מוצלח." : "אין החלפה שמוסיפה לפחות נקודה צפויה להרכב על פני השבוע הנוכחי והבא."}</p></section>`);
@@ -560,7 +560,7 @@ function renderFA(){
       <tbody>${shown.map(row).join("") || `<tr><td colspan="12" class="dim" style="height:44px;text-align:center">אין שחקנים שמתאימים לסינון</td></tr>`}</tbody></table></div>`
       : `<div class="lcards dk-only">${shown.map(cardV).join("") || `<p class="mut">אין שחקנים שמתאימים לסינון</p>`}</div>`}
     ${total > shown.length ? `<div style="text-align:center;margin-top:10px"><button class="btn" onclick="SEA.fa.more=true;renderFA()">עוד ${total - shown.length} שחקנים</button></div>` : ""}
-    <p class="note">ערך שבועי = נקודות לשבוע ב-Lock-in, מתעדכן מהמשחקים של העונה ומהדקות האחרונות, אחרי סיכון פציעה. פער = מול השחקן הכי חלש אצלך. דקות בפועל: ממוצע עד שלושת המשחקים האחרונים, ללא משחקי היום; בסוגריים ההפרש מתחזית קדם העונה. ↑ = עלייה של 5 דקות ומעלה אחרי 3 משחקים. * = נתוני עבר חסרים. הסימון אינו משנה את הדירוג.</p></section>`);
+    <p class="note">ערך מחושב לשלוש הזדמנויות נעילה לפי הניקוד מהופעות העונה. בהמלצת החלפה משווים את מספר המשחקים שנותרו ואת הממוצעים בפועל של שני השחקנים. פער = מול השחקן הכי חלש אצלך. דקות בפועל: ממוצע עד שלושת המשחקים האחרונים, ללא משחקי היום; בסוגריים ההפרש מתחזית קדם העונה. ↑ = עלייה של 5 דקות ומעלה אחרי 3 משחקים. * = נתוני עבר חסרים. הסימון אינו משנה את הדירוג.</p></section>`);
   html.push(`<div class="lstack" data-pt="swap free">${main.join("")}</div>`);
 
   // ---- my roster, weakest first: stays beside the table while it scrolls ----
@@ -935,12 +935,12 @@ function openCardSeason(id){
           <div class="cd-meta">${team && team !== "FA" ? tlI(team) : ""}${sub}</div><div class="cd-chips">${chips}</div></div>
         <button class="cd-x" type="button" aria-label="סגירה" onclick="$('card').close()">${IC.x}</button></div>
       <div class="cd-hero">
-        <div class="cd-hv"><small>ערך שבועי</small><span class="n">${f1(val)}</span>${gap}</div>
+        <div class="cd-hv"><small>ערך נעילה ל־3 משחקים</small><span class="n">${f1(val)}</span>${gap}</div>
         <div class="cd-strip">
-          <div><small>תחזית למשחק</small><span class="n">${f1(p.fpg)}</span></div>
-          <div><small>תקרה (10% הטובים)</small><span class="n">${p.p90 ? f1(p.p90) : "—"}</span></div>
-          <div><small>זמינות צפויה</small><span class="n ${avc}">${av}%</span></div>
-          <div><small>דקות צפויות</small><span class="n">${p.min ? f1(p.min) : "—"}</span></div>
+          <div><small>נק׳ למשחק העונה</small><span class="n">${formOf(p).n?f1(formOf(p).fc):"—"}</span></div>
+          <div><small>שיא העונה</small><span class="n">${formOf(p).n?f1(Math.max(...formOf(p).scores)):"—"}</span></div>
+          <div><small>הופעות העונה</small><span class="n">${formOf(p).n}</span></div>
+          <div><small>דקות למשחק העונה</small><span class="n">${formOf(p).n?f1(formOf(p).minAll):"—"}</span></div>
           <div><small>עונה שעברה</small><span class="n">${p.fpgL ? f1(p.fpgL) : "—"}</span><em>${p.gpL || 0} משחקים</em></div>
           <div><small>ADP · דירוג מודל</small><span class="n"><bdi dir="ltr">${p.adp ? f1(p.adp) : "—"} · ${p.rk ?? "—"}</bdi></span></div></div></div></div>
     <div class="cd-tabs" role="tablist">${[["sum", "סיכום"], ["games", "משחקים"], ["proj", "תחזית"]].map(([k, t]) => `<button role="tab" data-k="${k}" class="${k === CARDT ? "on" : ""}" onclick="cardTab('${k}')">${t}</button>`).join("")}</div>
@@ -1076,12 +1076,777 @@ function renderWatch(){
     group("rolePanel","מי מקבל יותר דקות?",roles,"אין כרגע עליית דקות עם מספיק הופעות להשוואה.");
 }
 
-const draftPicks2026 = [{"name": "Nikola Jokić", "owner": "אבי", "no": 1, "gp": 15, "rank": 3, "avg": 33.6}, {"name": "Victor Wembanyama", "owner": "אליעד", "no": 2, "gp": 17, "rank": 1, "avg": 38.1}, {"name": "Luka Dončić", "owner": "אריאל", "no": 3, "gp": 15, "rank": 2, "avg": 34.7}, {"name": "Giannis Antetokounmpo", "owner": "נתי הוותיק", "no": 4, "gp": 15, "rank": 4, "avg": 31.4}, {"name": "Cade Cunningham", "owner": "נתי הרוקי", "no": 5, "gp": 15, "rank": 7, "avg": 26.9}, {"name": "Shai Gilgeous-Alexander", "owner": "דוד", "no": 6, "gp": 16, "rank": 8, "avg": 26.5}, {"name": "Jalen Johnson", "owner": "דוד", "no": 7, "gp": 14, "rank": 15, "avg": 24.4}, {"name": "Tyrese Maxey", "owner": "נתי הרוקי", "no": 8, "gp": 16, "rank": 17, "avg": 24.0}, {"name": "Anthony Edwards", "owner": "נתי הוותיק", "no": 9, "gp": 4, "rank": null, "avg": 28.7}, {"name": "Alperen Şengün", "owner": "אריאל", "no": 10, "gp": 15, "rank": 6, "avg": 27.5}, {"name": "Jayson Tatum", "owner": "אליעד", "no": 11, "gp": 15, "rank": 11, "avg": 26.0}, {"name": "Cooper Flagg", "owner": "אבי", "no": 12, "gp": 16, "rank": 9, "avg": 26.5}, {"name": "Tyrese Haliburton", "owner": "אבי", "no": 13, "gp": 4, "rank": null, "avg": 26.8}, {"name": "Scottie Barnes", "owner": "אליעד", "no": 14, "gp": 11, "rank": 14, "avg": 24.9}, {"name": "Jaylen Brown", "owner": "אריאל", "no": 15, "gp": 14, "rank": 30, "avg": 21.9}, {"name": "Josh Giddey", "owner": "נתי הוותיק", "no": 16, "gp": 16, "rank": 64, "avg": 18.9}, {"name": "Karl-Anthony Towns", "owner": "נתי הרוקי", "no": 17, "gp": 16, "rank": 5, "avg": 27.8}, {"name": "Donovan Mitchell", "owner": "דוד", "no": 18, "gp": 16, "rank": 22, "avg": 22.7}, {"name": "Deni Avdija", "owner": "דוד", "no": 19, "gp": 14, "rank": 18, "avg": 23.6}, {"name": "Devin Booker", "owner": "נתי הרוקי", "no": 20, "gp": 15, "rank": 38, "avg": 20.6}, {"name": "Domantas Sabonis", "owner": "נתי הוותיק", "no": 21, "gp": 15, "rank": 31, "avg": 21.7}, {"name": "Paolo Banchero", "owner": "אריאל", "no": 22, "gp": 2, "rank": null, "avg": 23.9}, {"name": "Jamal Murray", "owner": "אליעד", "no": 23, "gp": 15, "rank": 10, "avg": 26.4}, {"name": "Evan Mobley", "owner": "אבי", "no": 24, "gp": 12, "rank": 37, "avg": 20.7}, {"name": "Austin Reaves", "owner": "אבי", "no": 25, "gp": 12, "rank": 43, "avg": 20.4}, {"name": "Amen Thompson", "owner": "אליעד", "no": 26, "gp": 16, "rank": 67, "avg": 18.5}, {"name": "LaMelo Ball", "owner": "אריאל", "no": 27, "gp": 17, "rank": 56, "avg": 19.4}, {"name": "Lauri Markkanen", "owner": "נתי הוותיק", "no": 28, "gp": 8, "rank": 62, "avg": 19.0}, {"name": "Trae Young", "owner": "נתי הרוקי", "no": 29, "gp": 18, "rank": 40, "avg": 20.6}, {"name": "Anthony Davis", "owner": "דוד", "no": 30, "gp": 16, "rank": 13, "avg": 25.4}, {"name": "Jalen Brunson", "owner": "דוד", "no": 31, "gp": 17, "rank": 20, "avg": 23.2}, {"name": "Bam Adebayo", "owner": "נתי הרוקי", "no": 32, "gp": 16, "rank": 16, "avg": 24.2}, {"name": "Kawhi Leonard", "owner": "נתי הוותיק", "no": 33, "gp": 2, "rank": null, "avg": 23.9}, {"name": "Trey Murphy", "owner": "אריאל", "no": 34, "gp": 10, "rank": 83, "avg": 17.1}, {"name": "Jalen Duren", "owner": "אליעד", "no": 35, "gp": 2, "rank": null, "avg": 17.1}, {"name": "Kevin Durant", "owner": "אבי", "no": 36, "gp": 17, "rank": 65, "avg": 18.9}, {"name": "Pascal Siakam", "owner": "אבי", "no": 37, "gp": 16, "rank": 35, "avg": 20.8}, {"name": "Desmond Bane", "owner": "אליעד", "no": 38, "gp": 15, "rank": 68, "avg": 18.3}, {"name": "Kevin Porter", "owner": "אריאל", "no": 39, "gp": 0, "rank": null, "avg": null}, {"name": "Walker Kessler", "owner": "נתי הוותיק", "no": 40, "gp": 16, "rank": 24, "avg": 22.4}, {"name": "Jalen Williams", "owner": "נתי הרוקי", "no": 41, "gp": 3, "rank": null, "avg": 15.5}, {"name": "Michael Porter", "owner": "דוד", "no": 42, "gp": 14, "rank": 49, "avg": 19.9}, {"name": "Brandon Miller", "owner": "דוד", "no": 43, "gp": 13, "rank": 70, "avg": 18.0}, {"name": "James Harden", "owner": "נתי הרוקי", "no": 44, "gp": 16, "rank": 36, "avg": 20.7}, {"name": "Cameron Boozer", "owner": "נתי הוותיק", "no": 45, "gp": 16, "rank": 29, "avg": 22.0}, {"name": "Chet Holmgren", "owner": "אריאל", "no": 46, "gp": 3, "rank": null, "avg": 20.7}, {"name": "OG Anunoby", "owner": "אליעד", "no": 47, "gp": 15, "rank": 86, "avg": 16.9}, {"name": "Darius Garland", "owner": "אבי", "no": 48, "gp": 15, "rank": 75, "avg": 17.6}, {"name": "LeBron James", "owner": "אבי", "no": 49, "gp": 13, "rank": 27, "avg": 22.0}, {"name": "VJ Edgecombe", "owner": "אליעד", "no": 50, "gp": 16, "rank": 55, "avg": 19.4}, {"name": "Alex Sarr", "owner": "אריאל", "no": 51, "gp": 17, "rank": 98, "avg": 16.1}, {"name": "Stephon Castle", "owner": "נתי הוותיק", "no": 52, "gp": 17, "rank": 61, "avg": 19.0}, {"name": "Zion Williamson", "owner": "נתי הרוקי", "no": 53, "gp": 16, "rank": 41, "avg": 20.4}, {"name": "Naz Reid", "owner": "דוד", "no": 54, "gp": 15, "rank": 58, "avg": 19.3}, {"name": "De'Aaron Fox", "owner": "דוד", "no": 55, "gp": 16, "rank": 104, "avg": 15.8}, {"name": "Donovan Clingan", "owner": "נתי הרוקי", "no": 56, "gp": 16, "rank": 42, "avg": 20.4}, {"name": "Derrick White", "owner": "נתי הוותיק", "no": 57, "gp": 16, "rank": 95, "avg": 16.2}, {"name": "Keyonte George", "owner": "אריאל", "no": 58, "gp": 17, "rank": 44, "avg": 20.3}, {"name": "Tyler Herro", "owner": "אליעד", "no": 59, "gp": 16, "rank": 47, "avg": 20.0}, {"name": "Julius Randle", "owner": "אבי", "no": 60, "gp": 15, "rank": 51, "avg": 19.8}, {"name": "Dejounte Murray", "owner": "אבי", "no": 61, "gp": 9, "rank": 89, "avg": 16.7}, {"name": "Dyson Daniels", "owner": "אליעד", "no": 62, "gp": 17, "rank": 26, "avg": 22.1}, {"name": "Kon Knueppel", "owner": "אריאל", "no": 63, "gp": 1, "rank": null, "avg": -0.5}, {"name": "Matas Buzelis", "owner": "נתי הוותיק", "no": 64, "gp": 16, "rank": 113, "avg": 14.4}, {"name": "Ja Morant", "owner": "נתי הרוקי", "no": 65, "gp": 4, "rank": null, "avg": 16.2}, {"name": "Josh Hart", "owner": "דוד", "no": 66, "gp": 14, "rank": 108, "avg": 14.9}, {"name": "Dylan Harper", "owner": "דוד", "no": 67, "gp": 15, "rank": 59, "avg": 19.1}, {"name": "Miles Bridges", "owner": "נתי הרוקי", "no": 68, "gp": 15, "rank": 53, "avg": 19.6}, {"name": "Onyeka Okongwu", "owner": "נתי הוותיק", "no": 69, "gp": 17, "rank": 60, "avg": 19.1}, {"name": "AJ Dybantsa", "owner": "אריאל", "no": 70, "gp": 14, "rank": 74, "avg": 17.7}, {"name": "Kyrie Irving", "owner": "אליעד", "no": 71, "gp": 14, "rank": 32, "avg": 21.7}, {"name": "Franz Wagner", "owner": "אבי", "no": 72, "gp": 16, "rank": 12, "avg": 25.8}, {"name": "Damian Lillard", "owner": "אבי", "no": 73, "gp": 16, "rank": 78, "avg": 17.6}, {"name": "Jarrett Allen", "owner": "אליעד", "no": 74, "gp": 14, "rank": 80, "avg": 17.6}, {"name": "Ace Bailey", "owner": "אריאל", "no": 75, "gp": 18, "rank": 99, "avg": 16.1}, {"name": "Norman Powell", "owner": "נתי הוותיק", "no": 76, "gp": 13, "rank": 82, "avg": 17.2}, {"name": "Joel Embiid", "owner": "נתי הרוקי", "no": 77, "gp": 14, "rank": 23, "avg": 22.5}, {"name": "Jaren Jackson", "owner": "דוד", "no": 78, "gp": 4, "rank": null, "avg": 14.8}, {"name": "Paul George", "owner": "דוד", "no": 79, "gp": 14, "rank": 25, "avg": 22.3}, {"name": "Ausar Thompson", "owner": "נתי הרוקי", "no": 80, "gp": 15, "rank": 46, "avg": 20.1}, {"name": "Ryan Rollins", "owner": "נתי הוותיק", "no": 81, "gp": 15, "rank": 124, "avg": 13.9}, {"name": "RJ Barrett", "owner": "אריאל", "no": 82, "gp": 14, "rank": 45, "avg": 20.2}, {"name": "Stephen Curry", "owner": "אליעד", "no": 83, "gp": 10, "rank": 19, "avg": 23.4}, {"name": "Ty Jerome", "owner": "אבי", "no": 84, "gp": 12, "rank": 33, "avg": 21.0}];
+const draftPicks2026 = [
+ {
+  "name": "Nikola Jokić",
+  "owner": "אבי",
+  "no": 1,
+  "gp": 15,
+  "rank": 3,
+  "avg": 33.6,
+  "id": "1658"
+ },
+ {
+  "name": "Victor Wembanyama",
+  "owner": "אליעד",
+  "no": 2,
+  "gp": 17,
+  "rank": 1,
+  "avg": 38.1,
+  "id": "2577"
+ },
+ {
+  "name": "Luka Dončić",
+  "owner": "אריאל",
+  "no": 3,
+  "gp": 15,
+  "rank": 2,
+  "avg": 34.7,
+  "id": "1970"
+ },
+ {
+  "name": "Giannis Antetokounmpo",
+  "owner": "נתי הוותיק",
+  "no": 4,
+  "gp": 15,
+  "rank": 4,
+  "avg": 31.4,
+  "id": "1380"
+ },
+ {
+  "name": "Cade Cunningham",
+  "owner": "נתי הרוקי",
+  "no": 5,
+  "gp": 15,
+  "rank": 7,
+  "avg": 26.9,
+  "id": "2267"
+ },
+ {
+  "name": "Shai Gilgeous-Alexander",
+  "owner": "דוד",
+  "no": 6,
+  "gp": 16,
+  "rank": 8,
+  "avg": 26.5,
+  "id": "1957"
+ },
+ {
+  "name": "Jalen Johnson",
+  "owner": "דוד",
+  "no": 7,
+  "gp": 14,
+  "rank": 15,
+  "avg": 24.4,
+  "id": "2284"
+ },
+ {
+  "name": "Tyrese Maxey",
+  "owner": "נתי הרוקי",
+  "no": 8,
+  "gp": 16,
+  "rank": 17,
+  "avg": 24.0,
+  "id": "2126"
+ },
+ {
+  "name": "Anthony Edwards",
+  "owner": "נתי הוותיק",
+  "no": 9,
+  "gp": 4,
+  "rank": null,
+  "avg": 28.7,
+  "id": "2133"
+ },
+ {
+  "name": "Alperen Şengün",
+  "owner": "אריאל",
+  "no": 10,
+  "gp": 15,
+  "rank": 6,
+  "avg": 27.5,
+  "id": "2308"
+ },
+ {
+  "name": "Jayson Tatum",
+  "owner": "אליעד",
+  "no": 11,
+  "gp": 15,
+  "rank": 11,
+  "avg": 26.0,
+  "id": "1822"
+ },
+ {
+  "name": "Cooper Flagg",
+  "owner": "אבי",
+  "no": 12,
+  "gp": 16,
+  "rank": 9,
+  "avg": 26.5,
+  "id": "4760"
+ },
+ {
+  "name": "Tyrese Haliburton",
+  "owner": "אבי",
+  "no": 13,
+  "gp": 4,
+  "rank": null,
+  "avg": 26.8,
+  "id": "2161"
+ },
+ {
+  "name": "Scottie Barnes",
+  "owner": "אליעד",
+  "no": 14,
+  "gp": 11,
+  "rank": 14,
+  "avg": 24.9,
+  "id": "2289"
+ },
+ {
+  "name": "Jaylen Brown",
+  "owner": "אריאל",
+  "no": 15,
+  "gp": 14,
+  "rank": 30,
+  "avg": 21.9,
+  "id": "1711"
+ },
+ {
+  "name": "Josh Giddey",
+  "owner": "נתי הוותיק",
+  "no": 16,
+  "gp": 16,
+  "rank": 64,
+  "avg": 18.9,
+  "id": "2313"
+ },
+ {
+  "name": "Karl-Anthony Towns",
+  "owner": "נתי הרוקי",
+  "no": 17,
+  "gp": 16,
+  "rank": 5,
+  "avg": 27.8,
+  "id": "1613"
+ },
+ {
+  "name": "Donovan Mitchell",
+  "owner": "דוד",
+  "no": 18,
+  "gp": 16,
+  "rank": 22,
+  "avg": 22.7,
+  "id": "1845"
+ },
+ {
+  "name": "Deni Avdija",
+  "owner": "דוד",
+  "no": 19,
+  "gp": 14,
+  "rank": 18,
+  "avg": 23.6,
+  "id": "2181"
+ },
+ {
+  "name": "Devin Booker",
+  "owner": "נתי הרוקי",
+  "no": 20,
+  "gp": 15,
+  "rank": 38,
+  "avg": 20.6,
+  "id": "1648"
+ },
+ {
+  "name": "Domantas Sabonis",
+  "owner": "נתי הוותיק",
+  "no": 21,
+  "gp": 15,
+  "rank": 31,
+  "avg": 21.7,
+  "id": "1739"
+ },
+ {
+  "name": "Paolo Banchero",
+  "owner": "אריאל",
+  "no": 22,
+  "gp": 2,
+  "rank": null,
+  "avg": 23.9,
+  "id": "2458"
+ },
+ {
+  "name": "Jamal Murray",
+  "owner": "אליעד",
+  "no": 23,
+  "gp": 15,
+  "rank": 10,
+  "avg": 26.4,
+  "id": "1747"
+ },
+ {
+  "name": "Evan Mobley",
+  "owner": "אבי",
+  "no": 24,
+  "gp": 12,
+  "rank": 37,
+  "avg": 20.7,
+  "id": "2259"
+ },
+ {
+  "name": "Austin Reaves",
+  "owner": "אבי",
+  "no": 25,
+  "gp": 12,
+  "rank": 43,
+  "avg": 20.4,
+  "id": "2316"
+ },
+ {
+  "name": "Amen Thompson",
+  "owner": "אליעד",
+  "no": 26,
+  "gp": 16,
+  "rank": 67,
+  "avg": 18.5,
+  "id": "2574"
+ },
+ {
+  "name": "LaMelo Ball",
+  "owner": "אריאל",
+  "no": 27,
+  "gp": 17,
+  "rank": 56,
+  "avg": 19.4,
+  "id": "2179"
+ },
+ {
+  "name": "Lauri Markkanen",
+  "owner": "נתי הוותיק",
+  "no": 28,
+  "gp": 8,
+  "rank": 62,
+  "avg": 19.0,
+  "id": "1752"
+ },
+ {
+  "name": "Trae Young",
+  "owner": "נתי הרוקי",
+  "no": 29,
+  "gp": 18,
+  "rank": 40,
+  "avg": 20.6,
+  "id": "1945"
+ },
+ {
+  "name": "Anthony Davis",
+  "owner": "דוד",
+  "no": 30,
+  "gp": 16,
+  "rank": 13,
+  "avg": 25.4,
+  "id": "1272"
+ },
+ {
+  "name": "Jalen Brunson",
+  "owner": "דוד",
+  "no": 31,
+  "gp": 17,
+  "rank": 20,
+  "avg": 23.2,
+  "id": "1967"
+ },
+ {
+  "name": "Bam Adebayo",
+  "owner": "נתי הרוקי",
+  "no": 32,
+  "gp": 16,
+  "rank": 16,
+  "avg": 24.2,
+  "id": "1846"
+ },
+ {
+  "name": "Kawhi Leonard",
+  "owner": "נתי הוותיק",
+  "no": 33,
+  "gp": 2,
+  "rank": null,
+  "avg": 23.9,
+  "id": "1308"
+ },
+ {
+  "name": "Trey Murphy",
+  "owner": "אריאל",
+  "no": 34,
+  "gp": 10,
+  "rank": 83,
+  "avg": 17.1,
+  "id": "2285"
+ },
+ {
+  "name": "Jalen Duren",
+  "owner": "אליעד",
+  "no": 35,
+  "gp": 2,
+  "rank": null,
+  "avg": 17.1,
+  "id": "2438"
+ },
+ {
+  "name": "Kevin Durant",
+  "owner": "אבי",
+  "no": 36,
+  "gp": 17,
+  "rank": 65,
+  "avg": 18.9,
+  "id": "1433"
+ },
+ {
+  "name": "Pascal Siakam",
+  "owner": "אבי",
+  "no": 37,
+  "gp": 16,
+  "rank": 35,
+  "avg": 20.8,
+  "id": "1716"
+ },
+ {
+  "name": "Desmond Bane",
+  "owner": "אליעד",
+  "no": 38,
+  "gp": 15,
+  "rank": 68,
+  "avg": 18.3,
+  "id": "2143"
+ },
+ {
+  "name": "Kevin Porter",
+  "owner": "אריאל",
+  "no": 39,
+  "gp": 0,
+  "rank": null,
+  "avg": null,
+  "id": "2009"
+ },
+ {
+  "name": "Walker Kessler",
+  "owner": "נתי הוותיק",
+  "no": 40,
+  "gp": 16,
+  "rank": 24,
+  "avg": 22.4,
+  "id": "2441"
+ },
+ {
+  "name": "Jalen Williams",
+  "owner": "נתי הרוקי",
+  "no": 41,
+  "gp": 3,
+  "rank": null,
+  "avg": 15.5,
+  "id": "2453"
+ },
+ {
+  "name": "Michael Porter",
+  "owner": "דוד",
+  "no": 42,
+  "gp": 14,
+  "rank": 49,
+  "avg": 19.9,
+  "id": "1988"
+ },
+ {
+  "name": "Brandon Miller",
+  "owner": "דוד",
+  "no": 43,
+  "gp": 13,
+  "rank": 70,
+  "avg": 18.0,
+  "id": "2568"
+ },
+ {
+  "name": "James Harden",
+  "owner": "נתי הרוקי",
+  "no": 44,
+  "gp": 16,
+  "rank": 36,
+  "avg": 20.7,
+  "id": "1240"
+ },
+ {
+  "name": "Cameron Boozer",
+  "owner": "נתי הוותיק",
+  "no": 45,
+  "gp": 16,
+  "rank": 29,
+  "avg": 22.0,
+  "id": "4873"
+ },
+ {
+  "name": "Chet Holmgren",
+  "owner": "אריאל",
+  "no": 46,
+  "gp": 3,
+  "rank": null,
+  "avg": 20.7,
+  "id": "2455"
+ },
+ {
+  "name": "OG Anunoby",
+  "owner": "אליעד",
+  "no": 47,
+  "gp": 15,
+  "rank": 86,
+  "avg": 16.9,
+  "id": "1831"
+ },
+ {
+  "name": "Darius Garland",
+  "owner": "אבי",
+  "no": 48,
+  "gp": 15,
+  "rank": 75,
+  "avg": 17.6,
+  "id": "2007"
+ },
+ {
+  "name": "LeBron James",
+  "owner": "אבי",
+  "no": 49,
+  "gp": 13,
+  "rank": 27,
+  "avg": 22.0,
+  "id": "1362"
+ },
+ {
+  "name": "VJ Edgecombe",
+  "owner": "אליעד",
+  "no": 50,
+  "gp": 16,
+  "rank": 55,
+  "avg": 19.4,
+  "id": "4737"
+ },
+ {
+  "name": "Alex Sarr",
+  "owner": "אריאל",
+  "no": 51,
+  "gp": 17,
+  "rank": 98,
+  "avg": 16.1,
+  "id": "2733"
+ },
+ {
+  "name": "Stephon Castle",
+  "owner": "נתי הוותיק",
+  "no": 52,
+  "gp": 17,
+  "rank": 61,
+  "avg": 19.0,
+  "id": "2722"
+ },
+ {
+  "name": "Zion Williamson",
+  "owner": "נתי הרוקי",
+  "no": 53,
+  "gp": 16,
+  "rank": 41,
+  "avg": 20.4,
+  "id": "2054"
+ },
+ {
+  "name": "Naz Reid",
+  "owner": "דוד",
+  "no": 54,
+  "gp": 15,
+  "rank": 58,
+  "avg": 19.3,
+  "id": "2036"
+ },
+ {
+  "name": "De'Aaron Fox",
+  "owner": "דוד",
+  "no": 55,
+  "gp": 16,
+  "rank": 104,
+  "avg": 15.8,
+  "id": "1872"
+ },
+ {
+  "name": "Donovan Clingan",
+  "owner": "נתי הרוקי",
+  "no": 56,
+  "gp": 16,
+  "rank": 42,
+  "avg": 20.4,
+  "id": "2728"
+ },
+ {
+  "name": "Derrick White",
+  "owner": "נתי הוותיק",
+  "no": 57,
+  "gp": 16,
+  "rank": 95,
+  "avg": 16.2,
+  "id": "1830"
+ },
+ {
+  "name": "Keyonte George",
+  "owner": "אריאל",
+  "no": 58,
+  "gp": 17,
+  "rank": 44,
+  "avg": 20.3,
+  "id": "2580"
+ },
+ {
+  "name": "Tyler Herro",
+  "owner": "אליעד",
+  "no": 59,
+  "gp": 16,
+  "rank": 47,
+  "avg": 20.0,
+  "id": "2086"
+ },
+ {
+  "name": "Julius Randle",
+  "owner": "אבי",
+  "no": 60,
+  "gp": 15,
+  "rank": 51,
+  "avg": 19.8,
+  "id": "1535"
+ },
+ {
+  "name": "Dejounte Murray",
+  "owner": "אבי",
+  "no": 61,
+  "gp": 9,
+  "rank": 89,
+  "avg": 16.7,
+  "id": "1713"
+ },
+ {
+  "name": "Dyson Daniels",
+  "owner": "אליעד",
+  "no": 62,
+  "gp": 17,
+  "rank": 26,
+  "avg": 22.1,
+  "id": "2449"
+ },
+ {
+  "name": "Kon Knueppel",
+  "owner": "אריאל",
+  "no": 63,
+  "gp": 1,
+  "rank": null,
+  "avg": -0.5,
+  "id": "4740"
+ },
+ {
+  "name": "Matas Buzelis",
+  "owner": "נתי הוותיק",
+  "no": 64,
+  "gp": 16,
+  "rank": 113,
+  "avg": 14.4,
+  "id": "2835"
+ },
+ {
+  "name": "Ja Morant",
+  "owner": "נתי הרוקי",
+  "no": 65,
+  "gp": 4,
+  "rank": null,
+  "avg": 16.2,
+  "id": "2040"
+ },
+ {
+  "name": "Josh Hart",
+  "owner": "דוד",
+  "no": 66,
+  "gp": 14,
+  "rank": 108,
+  "avg": 14.9,
+  "id": "1803"
+ },
+ {
+  "name": "Dylan Harper",
+  "owner": "דוד",
+  "no": 67,
+  "gp": 15,
+  "rank": 59,
+  "avg": 19.1,
+  "id": "4754"
+ },
+ {
+  "name": "Miles Bridges",
+  "owner": "נתי הרוקי",
+  "no": 68,
+  "gp": 15,
+  "rank": 53,
+  "avg": 19.6,
+  "id": "1913"
+ },
+ {
+  "name": "Onyeka Okongwu",
+  "owner": "נתי הוותיק",
+  "no": 69,
+  "gp": 17,
+  "rank": 60,
+  "avg": 19.1,
+  "id": "2136"
+ },
+ {
+  "name": "AJ Dybantsa",
+  "owner": "אריאל",
+  "no": 70,
+  "gp": 14,
+  "rank": 74,
+  "avg": 17.7,
+  "id": "4866"
+ },
+ {
+  "name": "Kyrie Irving",
+  "owner": "אליעד",
+  "no": 71,
+  "gp": 14,
+  "rank": 32,
+  "avg": 21.7,
+  "id": "1054"
+ },
+ {
+  "name": "Franz Wagner",
+  "owner": "אבי",
+  "no": 72,
+  "gp": 16,
+  "rank": 12,
+  "avg": 25.8,
+  "id": "2304"
+ },
+ {
+  "name": "Damian Lillard",
+  "owner": "אבי",
+  "no": 73,
+  "gp": 16,
+  "rank": 78,
+  "avg": 17.6,
+  "id": "1444"
+ },
+ {
+  "name": "Jarrett Allen",
+  "owner": "אליעד",
+  "no": 74,
+  "gp": 14,
+  "rank": 80,
+  "avg": 17.6,
+  "id": "1787"
+ },
+ {
+  "name": "Ace Bailey",
+  "owner": "אריאל",
+  "no": 75,
+  "gp": 18,
+  "rank": 99,
+  "avg": 16.1,
+  "id": "4758"
+ },
+ {
+  "name": "Norman Powell",
+  "owner": "נתי הוותיק",
+  "no": 76,
+  "gp": 13,
+  "rank": 82,
+  "avg": 17.2,
+  "id": "1637"
+ },
+ {
+  "name": "Joel Embiid",
+  "owner": "נתי הרוקי",
+  "no": 77,
+  "gp": 14,
+  "rank": 23,
+  "avg": 22.5,
+  "id": "1511"
+ },
+ {
+  "name": "Jaren Jackson",
+  "owner": "דוד",
+  "no": 78,
+  "gp": 4,
+  "rank": null,
+  "avg": 14.8,
+  "id": "1924"
+ },
+ {
+  "name": "Paul George",
+  "owner": "דוד",
+  "no": 79,
+  "gp": 14,
+  "rank": 25,
+  "avg": 22.3,
+  "id": "1074"
+ },
+ {
+  "name": "Ausar Thompson",
+  "owner": "נתי הרוקי",
+  "no": 80,
+  "gp": 15,
+  "rank": 46,
+  "avg": 20.1,
+  "id": "2566"
+ },
+ {
+  "name": "Ryan Rollins",
+  "owner": "נתי הוותיק",
+  "no": 81,
+  "gp": 15,
+  "rank": 124,
+  "avg": 13.9,
+  "id": "2463"
+ },
+ {
+  "name": "RJ Barrett",
+  "owner": "אריאל",
+  "no": 82,
+  "gp": 14,
+  "rank": 45,
+  "avg": 20.2,
+  "id": "2001"
+ },
+ {
+  "name": "Stephen Curry",
+  "owner": "אליעד",
+  "no": 83,
+  "gp": 10,
+  "rank": 19,
+  "avg": 23.4,
+  "id": "1085"
+ },
+ {
+  "name": "Ty Jerome",
+  "owner": "אבי",
+  "no": 84,
+  "gp": 12,
+  "rank": 33,
+  "avg": 21.0,
+  "id": "2090"
+ }
+];
 
-function renderArchive(owner=""){
-  const rounds=Array.from({length:14},(_,i)=>draftPicks2026.filter(p=>Math.ceil(p.no/6)===i+1 && (!owner || p.owner===owner)));
+const archiveFilter={owner:"",round:0};
+function renderArchive(){
+  const {owner,round}=archiveFilter;
   const owners=[...new Set(draftPicks2026.map(p=>p.owner))];
-  $("xArchive").innerHTML=`<section class="blk s12"><div class="bh"><h2>דראפט 2026</h2><label>בחירות של <select id="archiveOwner"><option value="">כל הליגה</option>${owners.map(n=>`<option ${n===owner?"selected":""}>${esc(n)}</option>`).join("")}</select></label></div><p>84 בחירות · הממוצעים לפי ניקוד הליגה עד 22.11.2026</p></section>`+
-  rounds.map((ps,i)=>`<section class="blk s12"><div class="bh"><h2>סיבוב ${i+1}</h2></div>${ps.map(p=>`<div class="watchRow"><b>${p.no}. ${esc(p.name)}</b><span>${esc(p.owner)} · ${p.gp} הופעות${p.avg==null?"":` · ${p.avg} נק׳ למשחק`}</span></div>`).join("")}</section>`).join("");
-  $("archiveOwner").onchange=e=>renderArchive(e.target.value);
+  const picks=draftPicks2026.filter(p=>(!owner||owner===p.owner)&&(!round||Math.ceil(p.no/6)===round));
+  const select=(id,label,all,values,selected)=>`<label>${label}<select id="${id}"><option value="">${all}</option>${values.map(v=>`<option value="${esc(String(v))}" ${v===selected?"selected":""}>${esc(String(v))}</option>`).join("")}</select></label>`;
+  const pick=p=>`<button class="archivePick" type="button" onclick="openCard('${p.id}')"><span><strong>בחירה ${p.no}</strong> · ${esc(p.owner)}</span>${hsI(p.id,64)}<bdi>${esc(p.name)}</bdi><small>${p.avg==null?"טרם שיחק":f1(p.avg)+" נק׳ למשחק"} · ${p.gp} הופעות</small></button>`;
+  const section=(title,group)=>`<section class="blk s12"><div class="bh"><h2>${esc(title)}</h2></div><div class="archiveGrid">${group.map(pick).join("")}</div></section>`;
+  const rounds=Array.from({length:14},(_,i)=>i+1);
+  const board=owner?section("הבחירות של "+owner,picks):rounds.filter(i=>!round||i===round).map(i=>section("סיבוב "+i,picks.filter(p=>Math.ceil(p.no/6)===i))).join("");
+  $("xArchive").innerHTML=`<section class="blk s12 archiveHeader"><div><h2>לוח הדראפט 2026</h2><p>84 בחירות · 14 סיבובים · ממוצעי משחק עד 22.11.2026</p></div><div>${select("archiveOwner","מנג׳ר","כל הליגה",owners,owner)}${select("archiveRound","סיבוב","כל הסיבובים",rounds,round)}</div></section>`+board;
+  for(const [id,key] of [["archiveOwner","owner"],["archiveRound","round"]]){
+    $(id).onchange=e=>{archiveFilter[key]=key==="round"?Number(e.target.value):e.target.value;renderArchive();$(id).focus({preventScroll:true});};
+  }
 }

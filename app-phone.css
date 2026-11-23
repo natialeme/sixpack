@@ -344,3 +344,14 @@ body.app2 #settings[open] {display:grid;grid-template-columns: minmax(145px,22%)
 .watchEmpty{color:var(--tx2);margin:8px 0 0}
 @media(max-width:950px){#xWatch.cnt{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:540px){#xWatch .watchStats{width:100%;margin:0}#xWatch .watchMetric{flex:auto}.watchPerson img{width:42px;height:42px}}
+.archiveGrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px}
+#xArchive .archiveHeader{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-inline-start:4px solid var(--model)}
+.archiveHeader label{display:inline-grid;gap:3px;margin-inline-end:10px}
+.archiveHeader select{font:inherit;color:var(--tx);background:var(--s2);border:1px solid var(--ln);padding:6px;border-radius:6px}
+.archivePick{font:inherit;text-align:start;display:grid;align-content:start;justify-items:start;gap:5px;min-width:0;padding:12px;border-radius:10px;color:var(--tx);background:var(--s2);border:1px solid var(--ln);cursor:pointer}
+.archivePick:is(:hover,:focus-visible){border-color:var(--model)}
+.archivePick img{border-radius:50%;justify-self:center}
+.archivePick span,.archivePick small{font-size:12px;color:var(--tx2)}
+.archivePick bdi{font-weight:750;overflow-wrap:anywhere}
+@media(max-width:1150px){.archiveGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:620px){.archiveGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.archivePick{padding:8px}}

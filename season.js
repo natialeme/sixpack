@@ -626,33 +626,28 @@ function actualMinutes(pid, p){
   const delta = baseline != null ? average - baseline : null;
   return {average, baseline, delta, games: mins.length, partial, rising: !partial && mins.length === 3 && delta != null && delta >= 5};
 }
-// What a player is worth now, from his games (replay of 2025 and 2026, 02.11.2026): half blendM, half points a minute times
-// his minutes in the last three games. Before three games, blendM alone. A free agent can be recommended only after three
-// games and with one in the last ten days, the pool the replay tested. Same as form() in engine/week_report.py.
+// Waiver evidence uses completed appearances from the current season.
 let formMemo = {src: null, by: {}};
 function formOf(p){
   const log = seasonLog(p.id);
   if (formMemo.src !== HIST.memo) formMemo = {src: HIST.memo, by: {}};
   if (formMemo.by[p.id]) return formMemo.by[p.id];
-  const fpg = p.fpg || 1, n = log.length;
-  const {m} = blendM(fpg, p.sd || Math.max(4, 0.3 * fpg), p.pl, log.map(g => gameOf(g[1], g[3], g[4])));
-  const last3 = log.slice(-3), m3 = n ? mean(last3.map(g => g[3] / 60)) : 0, minAll = n ? mean(log.map(g => g[3] / 60)) : 0;
-  const fc = n >= 3 ? (m + log.reduce((a, g) => a + g[1], 0) / log.reduce((a, g) => a + g[3] / 60, 0) * m3) / 2 : m;
+  const scores=log.map(g=>g[1]), n=scores.length;
+  const fc=n?mean(scores):0;
+  const last3=log.slice(-3), m3=n?mean(last3.map(g=>g[3]/60)):0, minAll=n?mean(log.map(g=>g[3]/60)):0;
   const shots = log.slice(-5).map(g => g[5]).filter(Number.isFinite);
   const today = dObj(todayUS()).getTime();
-  return formMemo.by[p.id] = {n, fc, m3, minAll, l3: n ? mean(last3.map(g => g[1])) : 0, fga: shots.length ? mean(shots) : null,
+  return formMemo.by[p.id] = {n, scores, fc, m3, minAll, l3: n ? mean(last3.map(g => g[1])) : 0, fga: shots.length ? mean(shots) : null,
     ok: n >= 3 && today - dObj(log[n - 1][0]).getTime() <= 10 * DAY};
 }
-// the player with his weekly value moved by the same ratio, so adj() and lineup() work on it. The archive tabs keep p.val
-const liveMemo = new Map();
-function liveP(p){
-  const form = formOf(p), hit = liveMemo.get(p.id);
-  if (hit && hit.form === form) return hit;
-  const o = {...p, form, val: p.fpg > 0 ? (p.val || 0) * form.fc / p.fpg : p.val};
-  liveMemo.set(p.id, o);
-  return o;
+// Expected lock score from the distribution of completed appearances this season.
+function observedValue(scores,count){
+  if(!scores.length || !count) return 0;
+  let v=mean(scores);
+  for(let i=1;i<count;i++) v=mean(scores.map(score=>Math.max(score,v)));
+  return v;
 }
-const adjL = p => adj(liveP(p));
+const adjL=p=>observedValue(formOf(p).scores,3);
 // why his name is worth a look: shown beside it, not part of the value
 function faWhy(x){
   const f = x.form, last = lastName(x.p.n), out = [];
@@ -699,26 +694,23 @@ function freeAgents(D, Wm, mineT){
 let swapMemo = {key: "", list: []};
 function bestSwaps(X, n = 3, weekly = false){
   const roster = [...X.me.st.filter(Boolean), ...X.me.bench];
-  const free = X.D.txOk === false ? [] : X.fa.list.filter(c => c.form.ok && !isOut(c.inj));
+  const historyReady=Array.from({length:X.D.week-1},(_,i)=>i+1).every(w=>HIST.weeks?.[w] && !HIST.partial[w]);
+  const free = !historyReady || X.D.txOk === false ? [] : X.fa.list.filter(c => c.form.ok && !isOut(c.inj));
   const slots = X.D.lg.roster_positions.filter(s => !["BN","IR"].includes(s));
-  const forecasts=new Map();
-  if (!ASOF) for(const r of [...X.D.proj,...X.D.nextProj]) {
-    if(r.stats?.sp>0) forecasts.set(r.player_id+"|"+r.date,fpS(r.stats));
-  }
-  const value=(p,fc,dates)=>{
-    const means=dates.map(date=>(fc+(forecasts.get(p.id+"|"+date) ?? fc))/2);
-    return lockV(fc,p.sd || Math.max(4,fc*0.3),dates.length,means)[dates.length];
-  };
+  const value=(p,dates)=>observedValue(formOf(p).scores,dates.length);
   const nextGames = SEA.sch.games.filter(g => g.week === X.D.week + 1);
   const pool = roster.map(x => {
     const i = X.me.st.indexOf(x), live = x.g.some(g => g.live);
     const next = nextGames.filter(g => [g.home.team,g.away.team].includes(x.team)).map(g=>g.date).sort();
-    return {id:x.id, pos:x.p.pos || [], keep:!!(x.locked || x.pending || x.uncertain || live), protect:!!(x.p.stub || isOut(x.inj)),
+    const form=formOf(x.p);
+    const remaining=observedValue(form.scores,x.k);
+    const current=x.locked||live ? (x.pts??0) : Math.max(remaining,x.lastFp??remaining);
+    return {id:x.id, actual:form.fc, pos:x.p.pos || [], keep:!!(x.locked || x.pending || x.uncertain || live), protect:!!(x.p.stub || form.n<3 || isOut(x.inj)),
       fixed:i >= 0 && (x.lastFp != null || live || x.locked) ? i : -1,
-      remaining:x.V[x.k] || 0, score:[i >= 0 ? x.exp : x.V[x.k] || 0, isOut(x.inj) ? 0 : value(x.p, formOf(x.p).fc, next)]};
+      remaining, score:[i >= 0 ? current : remaining, isOut(x.inj) ? 0 : value(x.p,next)]};
   });
-  const candidates = free.map(c => ({id:c.p.id, pos:c.p.pos || [], fixed:-1,
-    score:[value(c.p,c.fc,c.dates), value(c.p,c.fc,c.datesNext)]}));
+  const candidates = free.map(c => ({id:c.p.id, actual:c.form.fc, pos:c.p.pos || [], fixed:-1,
+    score:[value(c.p,c.dates), value(c.p,c.datesNext)]}));
   const key = JSON.stringify([slots,pool,candidates]);
   if (swapMemo.key !== key) {
     swapMemo = {key, results:SixDecisions.swaps(pool,candidates,slots)};
@@ -729,7 +721,7 @@ function bestSwaps(X, n = 3, weekly = false){
     let missGain=null;
     if(weekly && c.dates.length){
       const row=candidates.find(p=>p.id===r.add);
-      const after=pool.filter(p=>p.id!==r.drop).concat({...row,score:[value(c.p,c.fc,c.dates.slice(1)),row.score[1]]});
+      const after=pool.filter(p=>p.id!==r.drop).concat({...row,score:[value(c.p,c.dates.slice(1)),row.score[1]]});
       missGain=SixDecisions.starters(after,slots,0).total-SixDecisions.starters(pool,slots,0).total;
     }
     return {c,d,g:r.total,thisWeek:r.gains[0],nextWeek:r.gains[1],missGain};
