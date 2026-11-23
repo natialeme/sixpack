@@ -15,7 +15,7 @@ const SEEN_KEY = "sixpack-inj-seen";        // injury statuses you already saw: 
 const SEA = {d: null, err: null, at: null, loading: false, timer: null, pl: null, plAt: 0, sch: null, schAt: 0,
   fa: {pos: "ALL", healthy: true, watch: false, sort: "gain", dir: -1}};
 const WD = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
-const SEASON_TABS = ["week", "fa", "live", "news"];
+const SEASON_TABS = ["week", "watch", "archive", "fa", "live", "news"];
 const SLEEPER_URL = `https://sleeper.com/leagues/${LIVE_LEAGUE}`;
 // a free agent alert needs this many points a week over my weakest player (as daily_alert.py). It was 3 until 22.10.2026,
 // when the league's scoring was halved: 1.5 keeps the same meaning in the new scale
@@ -126,6 +126,7 @@ async function fetchSeason(force){
 }
 function paintSeason(){
   renderHeader();
+  if (S.tab === "watch") renderWatch();
   if (S.tab === "week") renderWeek();
   if (S.tab === "fa") renderFA();
   if (S.tab === "live" && LIVE.data) renderLive();
@@ -221,7 +222,7 @@ async function loadEspnInjuries(force){
     (j.injuries || []).forEach(t => (t.injuries || []).forEach(x => {
       const n = normName((x.athlete || {}).displayName); if (!n) return;
       m[n] = {status: x.status, short: x.shortComment || "", long: x.longComment || "", date: x.date, ret: ((x.details || {}).returnDate) || null,
-        type: ((x.details || {}).type) || "", team: ESPN_TEAM[(((x.athlete || {}).team) || {}).abbreviation] || (t.displayName || "")};
+        type: ((x.details || {}).type) || "", team: ESPN_TEAM[x.athlete?.team?.abbreviation] || x.athlete?.team?.abbreviation || ""};
     }));
     ESPN.inj = m; ESPN.injErr = false;
   } catch (e) { ESPN.injErr = true; }
@@ -262,14 +263,14 @@ function compactWeek(rows){
   (rows || []).forEach(r => {      // today's games may still be on: they join tomorrow
     const s = r.stats || {};
     if (!s.sp || !r.date || r.date >= today) return;
-    (out[r.player_id] = out[r.player_id] || []).push([r.date, Math.round(fpS(s) * 100) / 100, Math.round(s.sp / 60), s.sp, BLEND_LINE.map(k => s[k] || 0), s.fga || 0]);   // Sleeper scores in quarters
+    (out[r.player_id] = out[r.player_id] || []).push([r.date, Math.round(fpS(s) * 100) / 100, Math.round(s.sp / 60), s.sp, BLEND_LINE.map(k => s[k] || 0), s.fga || 0,r.team]);   // Sleeper scores in quarters
   });
   return out;
 }
 async function loadHistory(D){
   if (HIST.loading) return false;
   if (!HIST.weeks) {
-    try { const h = JSON.parse(localStorage.getItem(HIST_KEY)); HIST.weeks = h && h.season === D.season && h.sc === scSig() && h.v === 3 ? h.weeks : {}; }
+    try { const h = JSON.parse(localStorage.getItem(HIST_KEY)); HIST.weeks = h && h.season === D.season && h.sc === scSig() && h.v === 4 ? h.weeks : {}; }
     catch (e) { HIST.weeks = {}; }
   }
   const missing = [];
@@ -286,7 +287,7 @@ async function loadHistory(D){
     catch (e) { break; }
   }
   const keep = Object.fromEntries(Object.entries(HIST.weeks).filter(([w]) => !HIST.partial[w]));
-  try { localStorage.setItem(HIST_KEY, JSON.stringify({season: D.season, sc: scSig(), v: 3, weeks: keep})); } catch (e) {}
+  try { localStorage.setItem(HIST_KEY, JSON.stringify({season: D.season, sc: scSig(), v: 4, weeks: keep})); } catch (e) {}
   HIST.loading = false; HIST.memo = null;
   return added > 0;
 }
@@ -470,11 +471,12 @@ function pState(id, Wm, mp, week){
     return projection && !ASOF ? (m + projection.fp) / 2 : m;
   });
   const V = lockV(m, sd, left.length, means);
-  const lastFp = played.length ? played[played.length - 1].fp : null;
+  const lastTeamGame = g.filter(x => x.done).at(-1);
+  const lastFp = lastTeamGame?.fp ?? null;
   let pts = mp && mp.players_points && mp.players_points[id] != null ? mp.players_points[id] : null;
   if (ASOF || pts == null) pts = lastFp;
   if (!played.length && !g.some(x => x.live)) pts = null;     // Sleeper shows 0 before his first game
-  const lastDate = played.length ? played[played.length - 1].date : null;
+  const lastDate = lastFp != null ? lastTeamGame.date : null;
   // Sleeper gave two different counted scores since his latest game (noteReads): assume no earlier lock, the safer advice
   const seen = lastDate && !ASOF && !g.some(x => x.live) ? (seenLedger()[week] || {})[id] : null;
   // the real locks of his roster, when Sleeper's GraphQL answered (loadLegs): they replace every guess below
@@ -485,7 +487,7 @@ function pState(id, Wm, mp, week){
   // or "נעלתי" was pressed for that game. Read from the ledger even during his game: it holds the reads from before.
   let locked = false, lockedOn = null, pending = null;     // pending: {date, fp} = Sleeper counts that earlier game, not confirmed yet
   const mark0 = (S.locks && S.locks[week] && S.locks[week][id]) || null;
-  if (pts != null && played.length >= 2 && Math.abs(pts - lastFp) > 0.05) {
+  if (pts != null && lastFp != null && played.length >= 2 && Math.abs(pts - lastFp) > 0.05) {
     const hit = played.slice(0, -1).find(x => Math.abs(x.fp - pts) < 0.05);
     const rec = lastDate && !ASOF ? (seenLedger()[week] || {})[id] : null;
     const ok = ASOF || (hit && mark0 === hit.date) || (rec && rec.date === lastDate && rec.vals.length === 1 && Math.abs(rec.vals[0] - pts) < 0.05
@@ -512,20 +514,23 @@ function pState(id, Wm, mp, week){
   if (mark === false) { locked = false; lockedOn = null; pts = lastFp; pending = null; }
   if (locked) pending = null;
   const out = isOut(inj);
-  const k = out ? 0 : left.length;
+  const matched = out && !ASOF ? espnInjOf(id) : null;
+  const report = matched?.team===team && !ESPN.injErr ? matched : null;
+  const returnDay = ["Out","Doubtful","Suspension"].includes(report?.status) ? report.ret?.slice(0,10) : null;
+  const k = out ? left.filter((game,i) => i > 0 && returnDay && game.date >= returnDay).length : left.length;
   const exp = locked ? (pts || 0) : !k ? (pts || 0) : lastFp != null ? Math.max(lastFp, V[k]) : V[k];
   const sdW = locked || !k ? 0 : sd * (lastFp != null ? 0.55 : 0.7);
   let act = null;                     // what to do with this player this week
   if (locked) act = "locked";
   else if (!g.length) act = "nogames";
   else if (out && lastFp == null) act = "out";
-  else if (lastFp != null && left.length && (out || lastFp >= V[left.length])) act = "lock";
+  else if (lastFp != null && left.length && (!k || lastFp >= V[k])) act = "lock";
   else if (lastFp != null && left.length) act = "wait";
   else if (!left.length) act = "final";
   else act = "ahead";
   const wkMin = mean((Wm.pj[id] || []).map(x => x.min));
   // thr: lock the latest game if it beats this (decision now). thrNext: the bar after his next game
-  const thr = lastFp != null && left.length ? V[left.length] : null, thrNext = left.length >= 2 ? V[left.length - 1] : null;
+  const thr = lastFp != null && left.length ? V[k] : null, thrNext = left.length >= 2 ? V[left.length - 1] : null;
   return {id, p, team, inj, g, played, left, k, m, sd, fpg, gp: games.length, minutes, V, lastFp, lastDate, pts, locked, lockedOn, mark, pressed, uncertain, pending, exp, sdW, act, thr, thrNext,
     today: g.find(x => x.today && !x.done) || null, wkMin, nextGames: (Wm.pjN[id] || []).length};
 }
@@ -673,15 +678,17 @@ function freeAgents(D, Wm, mineT){
     const team = teamOf(p.id), sch = Wm.byTeam[team] || [];
     const available = Math.max(now, waivers[p.id] || 0);
     const playable = g => !g.live && tipAt(team, g.date) > available;
-    const left = sch.filter(x => !x.done && playable(x)).length;
-    const next = nextWeek.filter(g => [g.home.team,g.away.team].includes(team) && playable(g)).length;
+    const eligible = sch.filter(x => !x.done && playable(x));
+    const left = eligible.length;
+    const eligibleNext = nextWeek.filter(g => [g.home.team,g.away.team].includes(team) && playable(g)).map(g=>g.date).sort();
+    const next = eligibleNext.length;
     const log = seasonLog(p.id), latest = log.at(-1);
     const nextDate = sch.find(g => !g.done && playable(g))?.date;
     const nextMinutes = (Wm.pj[p.id] || []).find(g => g.date === nextDate)?.min;
     const role = latest && dObj(Wm.today) - dObj(latest[0]) <= 7 * DAY ?
       SixDecisions.role(log.map(g => g[3]/60), p.pl?.min || p.min, nextMinutes) : null;
     const wkMin = mean((Wm.pj[p.id] || []).map(x => x.min)), form = formOf(p);
-    return {p, team, inj: injOf(p.id), left, games: sch.length, next, role, wkMin, actualMin: actualMinutes(p.id, p), dMin: wkMin && p.min ? wkMin - p.min : 0,
+    return {p, team, dates:eligible.map(g=>g.date), datesNext:eligibleNext, inj: injOf(p.id), left, games: sch.length, next, role, wkMin, actualMin: actualMinutes(p.id, p), dMin: wkMin && p.min ? wkMin - p.min : 0,
       trend: trend[p.id] || 0, waiverUntil: waivers[p.id] || null, val: adjL(p), gain: worst ? adjL(p) - adjL(worst.p) : 0,
       form, fc: form.fc, fcGain: worst ? form.fc - worstFc : 0, hot: !!worst && form.ok && form.l3 >= form.fc + 3 && form.l3 >= worstFc + SWAP_MIN && form.m3 >= form.minAll - 2};
   });
@@ -690,27 +697,43 @@ function freeAgents(D, Wm, mineT){
 
 // add X, drop Y: the gain of the whole roster (best nine plus the bench), so positions count, not only value
 let swapMemo = {key: "", list: []};
-function bestSwaps(X, n = 3){
+function bestSwaps(X, n = 3, weekly = false){
   const roster = [...X.me.st.filter(Boolean), ...X.me.bench];
   const free = X.D.txOk === false ? [] : X.fa.list.filter(c => c.form.ok && !isOut(c.inj));
   const slots = X.D.lg.roster_positions.filter(s => !["BN","IR"].includes(s));
-  const value = (p, fc, count) => count ? lockV(fc, p.sd || Math.max(4, fc * 0.3), count)[count] : 0;
+  const forecasts=new Map();
+  if (!ASOF) for(const r of [...X.D.proj,...X.D.nextProj]) {
+    if(r.stats?.sp>0) forecasts.set(r.player_id+"|"+r.date,fpS(r.stats));
+  }
+  const value=(p,fc,dates)=>{
+    const means=dates.map(date=>(fc+(forecasts.get(p.id+"|"+date) ?? fc))/2);
+    return lockV(fc,p.sd || Math.max(4,fc*0.3),dates.length,means)[dates.length];
+  };
   const nextGames = SEA.sch.games.filter(g => g.week === X.D.week + 1);
   const pool = roster.map(x => {
     const i = X.me.st.indexOf(x), live = x.g.some(g => g.live);
-    const next = nextGames.filter(g => [g.home.team,g.away.team].includes(x.team)).length;
+    const next = nextGames.filter(g => [g.home.team,g.away.team].includes(x.team)).map(g=>g.date).sort();
     return {id:x.id, pos:x.p.pos || [], keep:!!(x.locked || x.pending || x.uncertain || live), protect:!!(x.p.stub || isOut(x.inj)),
       fixed:i >= 0 && (x.lastFp != null || live || x.locked) ? i : -1,
       remaining:x.V[x.k] || 0, score:[i >= 0 ? x.exp : x.V[x.k] || 0, isOut(x.inj) ? 0 : value(x.p, formOf(x.p).fc, next)]};
   });
   const candidates = free.map(c => ({id:c.p.id, pos:c.p.pos || [], fixed:-1,
-    score:[value(c.p,c.fc,c.left), value(c.p,c.fc,c.next)]}));
+    score:[value(c.p,c.fc,c.dates), value(c.p,c.fc,c.datesNext)]}));
   const key = JSON.stringify([slots,pool,candidates]);
   if (swapMemo.key !== key) {
-    swapMemo = {key, results:SixDecisions.swaps(pool,candidates,slots).slice(0,6)};
+    swapMemo = {key, results:SixDecisions.swaps(pool,candidates,slots)};
   }
-  return swapMemo.results.slice(0,n).map(r => ({c:free.find(c=>c.p.id===r.add),
-    d:roster.find(d=>d.id===r.drop), g:r.total, thisWeek:r.gains[0], nextWeek:r.gains[1]}));
+  const ranked=weekly ? swapMemo.results.filter(r=>r.gains[0]>0).slice().sort((a,b)=>b.gains[0]-a.gains[0]) : swapMemo.results;
+  return ranked.slice(0,n).map(r=>{
+    const c=free.find(c=>c.p.id===r.add), d=roster.find(x=>x.id===r.drop);
+    let missGain=null;
+    if(weekly && c.dates.length){
+      const row=candidates.find(p=>p.id===r.add);
+      const after=pool.filter(p=>p.id!==r.drop).concat({...row,score:[value(c.p,c.fc,c.dates.slice(1)),row.score[1]]});
+      missGain=SixDecisions.starters(after,slots,0).total-SixDecisions.starters(pool,slots,0).total;
+    }
+    return {c,d,g:r.total,thisWeek:r.gains[0],nextWeek:r.gains[1],missGain};
+  });
 }
 
 // the closest move under the bar, for the "nothing worth it" message; call after bestSwaps
@@ -772,6 +795,7 @@ function skipLock(key, wait){
 }
 function rerenderSeason(){
   renderHeader();
+  if (S.tab === "watch") renderWatch();
   if (S.tab === "week") renderWeek();
   if (S.tab === "fa") renderFA();
   if (S.tab === "live" && LIVE.data) renderLive();

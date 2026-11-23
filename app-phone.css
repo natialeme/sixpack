@@ -296,3 +296,31 @@
   #xFa [aria-label="חוזרים מפציעה"] .lli .lwhen2{grid-column:2}
   #xFa [aria-label="חוזרים מפציעה"] .lli>.chip{justify-self:start}
 }
+
+body.app2 #settings {width:min(1120px,94vw);max-width:94vw;box-sizing:border-box}
+body.app2 #settings[open] {display:grid;grid-template-columns: minmax(145px,22%) minmax(0,1fr);align-content:start}
+#settings .dh,#settings .df {grid-column:1/-1}
+#settings .settingPages {display:flex;flex-direction:column;gap:6px;padding:16px;border-inline-end:1px solid var(--ln)}
+#settings .settingPages button {text-align:start;justify-content:flex-start}
+#settings .settingPages [aria-pressed="true"] {background:var(--s3);box-shadow:inset 0 0 0 1px var(--tx2)}
+#settings .settingBody {min-width:0;padding:8px}
+#settings .settingBody .sec {border:0}
+#settings [data-pane][hidden] {display:none}
+#settings input,#settings select,#settings .names {min-width:0;box-sizing:border-box}
+#settings .names {grid-template-columns:repeat(3,minmax(0,1fr))}
+#settings .df {border-top:1px solid var(--ln)}
+:is(#xWatch,#xArchive) .watchRow {display:flex;gap:1rem;align-items:baseline;flex-wrap:wrap;padding:12px 0;border-top:1px solid var(--ln)}
+@media(max-width:650px){
+ body.app2 #settings[open]{grid-template-columns:minmax(0,1fr)}
+ #settings .settingPages{flex-direction:row;flex-wrap:wrap;border:0;padding:8px;gap:4px}
+ #settings .settingPages .btn{padding:0 8px}
+ #settings .settingBody{padding:0}
+ #settings .k2{width:auto;max-width:40%}
+ #settings .names{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(max-height:610px) and (max-width:650px){
+ #settings .df{display:none}
+ #settings .settingBody .sec{padding:8px 12px}
+ #settings .dh{padding-block:8px}
+}

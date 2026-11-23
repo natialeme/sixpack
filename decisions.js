@@ -77,7 +77,7 @@ const SixDecisions = (() => {
     }
     return pairs.sort((a,b)=>b.total-a.total || b.gains[0]-a.gains[0]);
   }
-  return {role,swaps};
+  return {role,swaps,starters};
 })();
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = SixDecisions;

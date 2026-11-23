@@ -1475,7 +1475,7 @@ details.al-done .al{margin-top:8px}
 </style>
 <link rel="stylesheet" href="app.css?v=4cbf75f5">
 <link rel="stylesheet" href="app-light.css?v=f1b18762">
-<link rel="stylesheet" href="app-phone.css?v=603ea062">
+<link rel="stylesheet" href="app-phone.css?v=4a318944">
 <script>try{var t=location.hash==="#dark"?"dark":localStorage.getItem("sp-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body class="app2">
@@ -1484,8 +1484,10 @@ details.al-done .al{margin-top:8px}
   <div class="brand"><span class="mark" aria-hidden="true">6P</span><span class="brand-t"><b>The Six Pack NBA</b><small>עונה 26/27 · Lock-in</small></span></div>
   <nav class="tabs" id="tabs">
     <button data-t="week" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg><span>השבוע שלי</span></button>
+    <button data-t="watch" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15 8-2 6-5 2 2-6z"/></svg><span>מה לשים לב</span></button>
     <button data-t="fa" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg><span>שוק חופשי</span></button>
     <button data-t="live" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg><span>הליגה שלנו</span></button>
+    <button data-t="archive" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v4H3zM5 8v12h14V8M9 12h6"/></svg><span>ארכיון דראפט</span></button>
     <button data-t="news" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg><span>חדשות</span></button>
   </nav>
   <div class="rail-fill"></div>
@@ -1535,6 +1537,8 @@ details.al-done .al{margin-top:8px}
 <div class="view wrap" data-tab="plan" hidden><div class="dash" id="planDash"></div></div>
 
 <!-- ============ MY WEEK (in season) ============ -->
+<div class="view sv sx" data-tab="archive" hidden><div id="xArchive" class="cnt"></div></div>
+<div class="view sv sx" data-tab="watch" hidden><div id="xWatch" class="cnt"></div></div>
 <div class="view sv sx" data-tab="week" hidden><div id="xWeek" class="cnt"></div></div>
 
 <!-- ============ FREE AGENTS (in season) ============ -->
@@ -1556,41 +1560,33 @@ details.al-done .al{margin-top:8px}
      top before the season). Every change saves at once; app.js paints the live parts (phone, permission, data) -->
 <dialog id="settings" class="sx" aria-labelledby="setT">
   <div class="dh"><h3 id="setT">הגדרות</h3><span class="dim">נשמר רק בדפדפן הזה, מיד</span><span class="sp"></span><button class="x" type="button" id="closeSettings" aria-label="סגירה"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
-  <div class="cols">
-  <div>
-  <section class="sec" id="setPhone">
+<nav class="settingPages" aria-label="נושאי הגדרות"><button type="button" class="btn" data-setting="0">טלפון</button><button type="button" class="btn" data-setting="1">התראות</button><button type="button" class="btn" data-setting="2">ערך שחקנים</button><button type="button" class="btn" data-setting="3">נתונים</button><button type="button" class="btn" data-setting="4">דראפט</button></nav><div class="settingBody"><section data-pane="0" class="sec" id="setPhone">
     <div class="st"><h4>הטלפון</h4><span id="phoneState"></span><span class="sp"></span><span class="dim" id="phoneQ"></span></div>
     <p class="mut">"נעלתי" בטלפון מסומן כאן תוך שנייה, ו"נעלתי" כאן עוצר את התזכורות בטלפון.</p>
     <div class="row"><input id="ntfyIn" dir="ltr" autocomplete="off" spellcheck="false" placeholder="sixpack-…" aria-label="ערוץ ההתראות לטלפון (ntfy)"><button class="btn" type="button" id="ntfyGo">חיבור</button></div>
     <p class="dim">שם הערוץ: באפליקציית ntfy, ברשימת המנויים. או ב-<span dir="ltr">engine/.env</span>, אחרי <span dir="ltr">NTFY_TOPIC=</span>.</p>
   </section>
-  <section class="sec">
+<section data-pane="1" class="sec">
     <div class="st"><h4>התראות במחשב</h4></div>
     <label class="kv"><span class="k2">צליל והתראת מערכת</span><span class="v mut">כשיש משחק לנעול או שינוי בהרכב, והדף ברקע</span><input type="checkbox" id="soundChk" class="tgl"></label>
     <div class="kv"><span class="k2">הרשאת הדפדפן</span><span class="v" id="permState"></span></div>
   </section>
-  </div>
-  <div>
-  <section class="sec">
+<section data-pane="2" class="sec">
     <div class="st"><h4>ערך שחקנים</h4><span class="sp"></span><b class="n big2" id="riskLbl"></b></div>
     <label class="kv"><span class="k2">משקל סיכון פציעה</span><span class="v"><input type="range" id="riskRange" min="0" max="150" step="10"></span></label>
     <p class="dim">משנה את "ערך" ו"פער" בשוק החופשי ואת ההחלפות המומלצות. 0% מתעלם מפציעות, 100% מוריד מהערך לפי השבועות שהוא צפוי להחמיץ (רק את החלק שמעל השוק החופשי).</p>
   </section>
-  <section class="sec">
+<section data-pane="3" class="sec">
     <div class="st"><h4>הנתונים</h4><span class="sp"></span><button class="btn" type="button" id="setRefresh">רענון עכשיו</button></div>
     <div id="dataRows"></div>
   </section>
-  </div>
-  </div>
-  <details class="sec" id="setDraft">
-    <summary><h4>ארכיון הדראפט</h4><span class="dim" id="draftSum"></span><span class="sp"></span><svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
-    <div class="kv"><span class="k2">מיקום הבחירה שלי</span><span class="v"><select id="mySlotSel"></select></span></div>
+<section class="sec" id="setDraft" data-pane="4"><div class="st"><h4>ארכיון הדראפט</h4><span class="dim" id="draftSum"></span></div>    <div class="kv"><span class="k2">מיקום הבחירה שלי</span><span class="v"><select id="mySlotSel"></select></span></div>
     <div class="lbl">שמות הקבוצות לפי סדר הדראפט</div>
     <div class="names" id="namesBox"></div>
     <div class="kv"><span class="k2">סנכרון (Draft ID)</span><span class="v"><input id="draftIdIn" dir="ltr" autocomplete="off" spellcheck="false"></span></div>
     <p class="dim">כשהסנכרון דולק, כל בחירה ב-Sleeper נקלטת לבד תוך כמה שניות. סימון ידני ממשיך לעבוד כגיבוי.</p>
     <div class="row"><button class="btn" type="button" id="pullBtn">משוך סדר ושמות</button><span class="sp"></span><button class="btn lt" type="button" id="resetBtn">איפוס הדראפט</button></div>
-  </details>
+</section></div>
   <div class="df"><span class="sp"></span><button class="btn" type="button" id="closeSettings2">סגירה</button></div>
 </dialog>
 
@@ -1600,10 +1596,10 @@ details.al-done .al{margin-top:8px}
 <script src="board.js?v=991e7cb7"></script>
 <script src="season2025.js?v=fc3f3bd8"></script>
 <script src="league_tabs.js?v=22035131"></script>
-<script src="decisions.js?v=1446897d"></script>
-<script src="season.js?v=ea2dd38d"></script>
+<script src="decisions.js?v=7887cd6d"></script>
+<script src="season.js?v=0bbb7c66"></script>
 <script src="news.js?v=138f824a"></script>
-<script src="app.js?v=7ddc7247"></script>
+<script src="app.js?v=02f95018"></script>
 <script>
 "use strict";
 const B = window.BOARD;
@@ -2504,21 +2500,29 @@ function render(){
 function setTab(t){
   if (!SEASON_TABS.includes(t)) t = "week";
   S.tab = t; save();
-  document.body.classList.toggle("arc", !["week", "fa", "live", "news"].includes(t) || !inSeason());
+  document.body.classList.toggle("arc", !SEASON_TABS.includes(t) || !inSeason());
   document.body.classList.toggle("tabweek", t === "week");
   document.querySelectorAll(".view").forEach(v => { v.hidden = v.dataset.tab !== t; });
   render(); window.scrollTo(0, 0);
   if (t === "league") renderSeason();
   if (t === "live") renderLive();
+  if (t === "archive") renderArchive();
+  if (t === "watch") renderWatch();
   if (t === "week") renderWeek();
   if (t === "fa") renderFA();
   if (t === "news") renderNews();
 }
 
 // ---------- settings ----------
+function settingPage(i){
+  const dlg = $("settings");
+  dlg.querySelectorAll("[data-pane]").forEach(p => p.hidden = p.dataset.pane !== String(i));
+  dlg.querySelectorAll("[data-setting]").forEach(b => b.setAttribute("aria-pressed",String(b.dataset.setting === String(i))));
+}
+$("settings").querySelector(".settingPages").onclick = e => { if(e.target.dataset.setting) settingPage(e.target.dataset.setting); };
 function openSettings(){
   $("mySlotSel").innerHTML = `<option value="">— לא ידוע עדיין —</option>` + Array.from({length: T}, (_, i) => `<option value="${i + 1}" ${S.mySlot === i + 1 ? "selected" : ""}>${i + 1}</option>`).join("");
-  $("namesBox").innerHTML = S.names.map((n, i) => `<input data-i="${i}" value="${esc(n)}" placeholder="קבוצה ${i + 1}">`).join("");
+  $("namesBox").innerHTML = S.names.map((n, i) => `<input aria-label="קבוצה ${i+1}" data-i="${i}" value="${esc(n)}" placeholder="קבוצה ${i + 1}">`).join("");
   $("riskRange").value = S.risk; $("riskLbl").textContent = S.risk + "%";
   $("draftIdIn").value = S.draftId;
   $("soundChk").checked = S.sound;
@@ -2527,7 +2531,7 @@ function openSettings(){
   const pre = !inSeason(), dlg = $("settings");
   dlg.classList.toggle("pre", pre);
   $("setT").textContent = pre ? "הגדרות דראפט" : "הגדרות";
-  if (pre) $("setDraft").open = true;
+  settingPage(pre ? 4 : 0);
   if (!dlg.open) dlg.showModal();
   paintSettings();
 }
