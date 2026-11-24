@@ -275,6 +275,18 @@ body.app2:not(.arc){background:#f4f3ee;scrollbar-color:#bdb9ab #f4f3ee}
 .sx .ltog{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;border:1px solid var(--ln);border-radius:8px;font-size:13px;font-weight:600;color:var(--tx2);background:var(--s1)}
 .sx .ltog:hover{border-color:var(--ln3)}
 .sx .ltog.on{background:var(--tx);border-color:var(--tx);color:var(--on-tx)}
+/* the team filter (24.11.2026): a native select dressed as a toggle, dark when a team is chosen */
+.sx .ltm{display:inline-flex;flex:0 1 auto;min-width:0}
+.sx .ltm select{height:32px;max-width:100%;padding:0 10px;border:1px solid var(--ln);border-radius:8px;font:inherit;font-size:13px;font-weight:600;color:var(--tx2);background:var(--s1);cursor:pointer;outline:0}
+.sx .ltm select:hover{border-color:var(--ln3)}
+.sx .ltm select:focus-visible{border-color:var(--model)}
+.sx .ltm.on select{background:var(--tx);border-color:var(--tx);color:var(--on-tx)}
+.sx .ltm option,.sx .ltm optgroup{background:var(--s1);color:var(--tx)}
+.sx .ltmi{display:flex;align-items:center;gap:10px;margin:-4px 0 12px;padding:8px 12px;border-radius:8px;background:var(--s2);font-size:13px;color:var(--tx2);line-height:1.4}
+.sx .ltmi>span{flex:1;min-width:0}
+.sx .ltmi .tl{display:inline-block;width:20px;height:20px;vertical-align:-5px;margin-inline-end:6px}
+.sx .ltmi b{color:var(--tx)}
+.sx .ltmi .ltog{height:28px;flex:none}
 .sx .lfa th,.sx .lfa td{padding-inline:5px}
 .sx .lfa td{height:60px}
 .sx .lfa td:first-child{padding-inline:2px}

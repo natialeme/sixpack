@@ -64,7 +64,7 @@ function aRow(a){
     ${a.due ? `<span class="dl ${soon ? "now" : ""}">${xi("clock")}${a.due.live ? "משחק עכשיו" : esc(a.due.txt)}</span>` : ""}${aActs(a, "lime")}</div>`;
 }
 function openRoleMarket(){
-  Object.assign(SEA.fa,{role:true, healthy:true, q:"", pos:"ALL", watch:false});
+  Object.assign(SEA.fa,{role:true, healthy:true, q:"", pos:"ALL", watch:false, team:""});
   setTab("fa");
   setPT("fa","free");
 }
@@ -483,6 +483,9 @@ function renderWeek(){
 // ---------- "שוק חופשי" ----------
 function faSearch(el){ SEA.fa.q = el.value; SEA.fa.focus = el.selectionStart; renderFA(); }
 function faNext(n){ SEA.fa.swI = ((SEA.fa.swI || 0) + 1) % n; renderFA(); }
+// one NBA team's free players, or everyone who can play on the next game day, best pick-up first (Nati, 24.11.2026):
+// for a night that needs a player, or a position, from a team that plays. The narrowing filters go so the whole team shows.
+function faTeam(v){ Object.assign(SEA.fa, {team: v, sort: "gain", dir: -1, role: false, watch: false, q: "", more: false}); renderFA(); }
 function renderFA(){
   const out = $("xFa");
   startSeasonTimer();
@@ -523,7 +526,23 @@ function renderFA(){
   // ---- the table: the headers sort it ----
   const q = (F.q || "").trim().toLowerCase();
   const posOk = x => F.pos === "ALL" || (x.p.pos || []).some(p => (ELIG[F.pos] || [F.pos]).includes(p));
-  const list = fa.list.filter(x => posOk(x) && (!F.role || x.role) && (!F.healthy || !isOut(x.inj)) && (!F.watch || watch.has(x.p.id)) && (!q || x.p.n.toLowerCase().includes(q)));
+  // ---- the team filter: the teams of the next game day first, by tip-off; "@night" = whoever can play that day if picked up now ----
+  const Wm = X.Wm;
+  const gday = Wm.dates.find(d => d >= Wm.today && Object.values(Wm.byTeam).some(a => a.some(g => g.date === d && !g.done)));
+  const gdayTxt = !gday ? "" : gday === Wm.today ? "הלילה" : `ב-${dLbl(gday)}`;
+  const gOf = t => gday ? (Wm.byTeam[t] || []).find(g => g.date === gday && !g.done) : null;
+  const tipT = t => { const tp = gday && tipOf(t, gday); return tp && tp.t ? tp.t : 0; };
+  // RLM (‏) after each Latin name or time keeps "מול HOU · 03:30 · 12 פנויים" in reading order inside the native select
+  const RLM = "‏";
+  const gameTxt = t => { const g = gOf(t); return g ? `מול ${g.opp}${RLM}${g.live ? " · משחקת עכשיו" : tipT(t) ? ` · ${ilTime(tipT(t), false)}${RLM}` : ""}` : ""; };
+  // nFree: every free player of the team (keeps it in the list); nOk: the ones "בלי פצועים" lets through, the count in its option
+  const nFree = {}, nOk = {};
+  fa.list.forEach(x => { if (!x.team || x.team === "FA") return; nFree[x.team] = (nFree[x.team] || 0) + 1; if (!F.healthy || !isOut(x.inj)) nOk[x.team] = (nOk[x.team] || 0) + 1; });
+  const teams = Object.keys(nFree).sort();
+  const playing = teams.filter(gOf).sort((a, b) => (tipT(a) - tipT(b)) || a.localeCompare(b)), resting = teams.filter(t => !gOf(t));
+  if (F.team && (F.team === "@night" ? !playing.length : !nFree[F.team])) F.team = "";
+  const tmOk = x => !F.team || (F.team === "@night" ? x.dates.includes(gday) : x.team === F.team);
+  const list = fa.list.filter(x => tmOk(x) && posOk(x) && (!F.role || x.role) && (!F.healthy || !isOut(x.inj)) && (!F.watch || watch.has(x.p.id)) && (!q || x.p.n.toLowerCase().includes(q)));
   const actual = x => { const s = seasonSum(x.p.id); return s ? s.avg : -1; };
   // the average of the last n games, -1 for one who hasn't played: sorts him last
   const lastN = (id, n) => { const s = seasonSum(id); return s && s.last.length ? mean(s.last.slice(-n)) : -1; };
@@ -531,7 +550,18 @@ function renderFA(){
   const so = SORTS.find(s => s[0] === F.sort) || SORTS[1];
   // value and gap rank only players with games behind them (form.ok): one who hasn't played has no number of his own yet
   list.sort((a, b) => ((so[0] === "val" || so[0] === "gain") && b.form.ok - a.form.ok) || (F.dir || -1) * (so[2](a) - so[2](b)));
-  const total = list.length, shown = list.slice(0, F.more ? 120 : 15);
+  // one team: all of its free players at once
+  const total = list.length, shown = list.slice(0, F.more || (F.team && F.team !== "@night") ? 999 : 15);
+  const opt = (v, t) => `<option value="${esc(v)}"${(F.team || "") === v ? " selected" : ""}>${esc(t)}</option>`;
+  const teamSel = `<label class="ltm${F.team ? " on" : ""}"><select onchange="faTeam(this.value)" aria-label="סינון לפי קבוצה">${opt("", "כל הקבוצות")}`
+    + (playing.length ? `${opt("@night", `כל מי שמשחק ${gdayTxt} (${playing.length} קבוצות)`)}<optgroup label="משחקות ${esc(gdayTxt)}">${playing.map(t => opt(t, `${t}${RLM} · ${gameTxt(t)} · ${nOk[t] || 0} פנויים`)).join("")}</optgroup>` : "")
+    + `<optgroup label="${playing.length ? `לא משחקות ${esc(gdayTxt)}` : "קבוצות"}">${resting.map(t => opt(t, `${t}${RLM} · ${nOk[t] || 0} פנויים`)).join("")}</optgroup></select></label>`;
+  const sortTxt = so[0] === "gain" || so[0] === "val" ? "מהעדיף להרמה" : `ממוין לפי ${so[1]}`;
+  const tmInfo = !F.team ? "" : F.team === "@night"
+    ? `<b>כל מי שמשחק ${esc(gdayTxt)}</b> ויכול לשחק אם מרימים אותו עכשיו · <span class="n">${total}</span> שחקנים · ${esc(sortTxt)}`
+    : (() => { const t = F.team, nx = (Wm.byTeam[t] || []).find(g => !g.done);
+        const when = gOf(t) ? `${gdayTxt} ${gameTxt(t)}` : nx ? `המשחק הבא ${dLbl(nx.date)} מול ${nx.opp}${RLM}` :"אין לה עוד משחקים השבוע";
+        return `${tlI(t)}<b>${esc(t)}</b> · ${esc(when)} · <span class="n">${total}</span> פנויים · ${esc(sortTxt)}`; })();
   const lastTwo = id => { const s = seasonSum(id); return s && s.last.length > 1 ? `<span class="lg2" title="ממוצע ${f1(mean(s.last.slice(-2)))}">${s.last.slice(-2).map(v => `<span>${f1(v)}</span>`).join("")}</span>` : `<span class="dim">·</span>`; };
   const lastOne = id => { const s = seasonSum(id); return s && s.last.length ? `<b>${f1(s.last[s.last.length - 1])}</b>` : `<span class="dim" style="font-size:12px">עוד לא שיחק</span>`; };
   const retChip = x => { const e = x.inj && espnInjOf(x.p.id); return e && e.ret ? ` <span class="chip" style="line-height:18px">${xi("clock", 12)} ${esc(retTxt(e.ret).replace("חזרה משוערת ", "חוזר "))}</span>` : ""; };
@@ -549,12 +579,14 @@ function renderFA(){
   const cardV = x => `<article class="lcard"><div class="hdr">${pcell(x)}${star(x)}</div><div class="r2"><span class="n">${f1(x.val)}</span><small>ערך · ${gapCell(x)} מול ${esc(fa.worst ? lastName(fa.worst.p.n) : "החלש")}</small></div><div class="r3"><span>תחזית<b>${f1(x.fc)}</b></span><span>בפועל<b>${seasonSum(x.p.id) ? f1(seasonSum(x.p.id).avg) : "·"}</b></span><span>השבוע<b>${x.left}/${x.games}</b></span><span>דקות<b>${x.wkMin ? Math.round(x.wkMin) : "·"}</b></span></div></article>`;
   main.push(`<section class="blk" data-pt="free" aria-label="שחקנים פנויים" style="padding-bottom:10px"><div class="bh"><h2>שחקנים פנויים</h2><span class="meta"><span class="n">${total}</span>${V === "t" ? " · לחיצה על כותרת ממיינת" : ""}</span><span class="sp"></span><a href="${SLEEPER_URL}" target="_blank" rel="noopener">Sleeper ${xi("ext", 12)}</a><div class="seg dk-only"><button class="${V === "t" ? "on" : ""}" onclick="SEA.fa.view='t';renderFA()">טבלה</button><button class="${V === "c" ? "on" : ""}" onclick="SEA.fa.view='c';renderFA()">כרטיסים</button></div></div>
     <div class="ltools"><label class="lsrch">${xi("search", 15)}<input id="faQ" value="${esc(F.q || "")}" placeholder="חיפוש שחקן" oninput="faSearch(this)" aria-label="חיפוש שחקן"></label>
+      ${teamSel}
       <div class="seg">${["ALL", "G", "F", "SF", "PF", "C"].map(k => `<button class="${F.pos === k ? "on" : ""}" onclick="SEA.fa.pos='${k}';renderFA()">${k === "ALL" ? "הכל" : k}</button>`).join("")}</div>
       <button class="ltog${F.role ? " on" : ""}" onclick="SEA.fa.role=!SEA.fa.role;renderFA()">שינוי תפקיד</button>
       <button class="ltog${F.healthy ? " on" : ""}" onclick="SEA.fa.healthy=!SEA.fa.healthy;renderFA()">בלי פצועים</button>
       <button class="ltog${F.watch ? " on" : ""}" onclick="SEA.fa.watch=!SEA.fa.watch;renderFA()">${xi("star", 14)}רק במעקב (${watch.size})</button>
       <button class="ltog${so[0] === "trend" ? " on" : ""}" onclick="sortFA('trend')">הכי מוסיפים</button>
       <button class="ltog${so[0] === "l2" ? " on" : ""}" onclick="SEA.fa.sort='l2';SEA.fa.dir=-1;renderFA()" title="ממוצע שני המשחקים האחרונים">חמים עכשיו</button></div>
+    ${tmInfo ? `<div class="ltmi"><span>${tmInfo}</span><button type="button" class="ltog" onclick="faTeam('')">${xi("x", 13)}כל הקבוצות</button></div>` : ""}
     <div class="plist ph-only">${shown.map(prowF).join("") || `<p class="mut">אין שחקנים שמתאימים לסינון</p>`}</div>
     ${V === "t" ? `<div class="tsc dk-only"><table class="tb lfa"><thead><tr><th style="width:26px"></th><th style="text-align:right">שחקן</th>${th("val", "ערך")}${th("gain", "פער", SORTS[1][1])}${th("avg", "בפועל")}${th("l1", "אחרון", "הניקוד במשחק האחרון")}${th("l2", "שני האחרונים", "ממיין לפי הממוצע של שני המשחקים האחרונים")}${th("fpg", "תחזית")}${th("left", "השבוע")}<th>הבא</th>${th("min", "דקות תחזית", "תחזית שבועית מול תחזית קדם העונה")}${th("actualMin", "דקות בפועל", "ממוצע עד שלושת המשחקים האחרונים. חץ מסמן עלייה של 5 דקות אחרי 3 משחקים")}</tr></thead>
       <tbody>${shown.map(row).join("") || `<tr><td colspan="12" class="dim" style="height:44px;text-align:center">אין שחקנים שמתאימים לסינון</td></tr>`}</tbody></table></div>`
