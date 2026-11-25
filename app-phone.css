@@ -324,26 +324,7 @@ body.app2 #settings[open] {display:grid;grid-template-columns: minmax(145px,22%)
  #settings .settingBody .sec{padding:8px 12px}
  #settings .dh{padding-block:8px}
 }
-#xWatch.cnt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:16px}
-#xWatch .watchPanel{grid-column:auto;min-width:0;border-block-start:3px solid var(--model);padding:clamp(14px,1.6vw,25px)}
-#xWatch .injPanel{border-block-start-color:var(--warn)}
-#xWatch .lockPanel{border-block-start-color:var(--now)}
-#xWatch .movePanel{border-block-start-color:var(--good)}
-#xWatch .bh{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px}
-#xWatch .watchCount{font-weight:700;border:1px solid var(--ln);border-radius:40px;padding:1px 9px;color:var(--tx2)}
-.watchItem{padding:12px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid var(--ln)}
-.watchItem:last-child{padding-bottom:0}
-.watchPerson{border:0;background:none;color:var(--tx);display:flex;align-items:center;gap:8px;text-align:start;cursor:pointer;padding:0;font:inherit}
-.watchPerson img{width:48px;height:48px;object-fit:cover;border-radius:50%;background:var(--s2)}
-.watchPerson bdi{display:block;font-size:16px;font-weight:750}
-.watchPerson small,.watchMetric small{display:block;color:var(--tx2);font-size:12px}
-.watchStats{margin-inline-start:auto;display:flex;flex-wrap:wrap;gap:6px}
-.watchMetric{background:var(--s2);border-radius:7px;padding:6px 10px;min-width:65px}
-.watchMetric strong{display:block;font-size:17px;font-variant-numeric:tabular-nums}
-.watchDecision{font-weight:bold;color:var(--model)}
-.watchEmpty{color:var(--tx2);margin:8px 0 0}
-@media(max-width:950px){#xWatch.cnt{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:540px){#xWatch .watchStats{width:100%;margin:0}#xWatch .watchMetric{flex:auto}.watchPerson img{width:42px;height:42px}}
+/* the old "מה לשים לב" (four panels in two columns) was rebuilt 25.11.2026: its rules are in app-light.css (.whero, .wdec, .wside) */
 .archiveGrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px}
 #xArchive .archiveHeader{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-inline-start:4px solid var(--model)}
 .archiveHeader label{display:inline-grid;gap:3px;margin-inline-end:10px}

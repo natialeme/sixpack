@@ -1474,8 +1474,8 @@ details.al-done .al{margin-top:8px}
 }
 </style>
 <link rel="stylesheet" href="app.css?v=4cbf75f5">
-<link rel="stylesheet" href="app-light.css?v=731729a4">
-<link rel="stylesheet" href="app-phone.css?v=dd26bf36">
+<link rel="stylesheet" href="app-light.css?v=e6b66c0f">
+<link rel="stylesheet" href="app-phone.css?v=5bcfa7ac">
 <script>try{var t=location.hash==="#dark"?"dark":localStorage.getItem("sp-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body class="app2">
@@ -1483,12 +1483,13 @@ details.al-done .al{margin-top:8px}
 <aside class="rail" aria-label="ניווט">
   <div class="brand"><span class="mark" aria-hidden="true">6P</span><span class="brand-t"><b>The Six Pack NBA</b><small>עונה 26/27 · Lock-in</small></span></div>
   <nav class="tabs" id="tabs">
-    <button data-t="week" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg><span>השבוע שלי</span></button>
-    <button data-t="watch" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15 8-2 6-5 2 2-6z"/></svg><span>מה לשים לב</span></button>
-    <button data-t="fa" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg><span>שוק חופשי</span></button>
-    <button data-t="live" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg><span>הליגה שלנו</span></button>
-    <button data-t="archive" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v4H3zM5 8v12h14V8M9 12h6"/></svg><span>ארכיון דראפט</span></button>
-    <button data-t="news" data-season><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg><span>חדשות</span></button>
+    <button data-t="week" data-season data-s="השבוע"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg><span>השבוע שלי</span></button>
+    <button data-t="watch" data-season data-s="לשים לב"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15 8-2 6-5 2 2-6z"/></svg><span>מה לשים לב</span></button>
+    <button data-t="fa" data-season data-s="שוק"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg><span>שוק חופשי</span></button>
+    <button data-t="inj" data-season data-s="פציעות"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v6M9 11h6"/></svg><span>שחקנים ופציעות</span></button>
+    <button data-t="live" data-season data-s="הליגה"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg><span>הליגה שלנו</span></button>
+    <button data-t="news" data-season data-s="חדשות"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg><span>חדשות</span></button>
+    <button data-t="archive" data-season data-s="ארכיון"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v4H3zM5 8v12h14V8M9 12h6"/></svg><span>ארכיון דראפט</span></button>
   </nav>
   <div class="rail-fill"></div>
   <button class="icon-btn" id="bellBtn" type="button" aria-label="התראות" aria-haspopup="true" aria-expanded="false" hidden onclick="toggleAlertsPop()"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="bdg num" id="bellN" hidden></span><span class="rl">התראות</span></button>
@@ -1543,6 +1544,7 @@ details.al-done .al{margin-top:8px}
 
 <!-- ============ FREE AGENTS (in season) ============ -->
 <div class="view sv sx" data-tab="fa" hidden><div id="xFa" class="cnt"></div></div>
+<div class="view sv sx" data-tab="inj" hidden><div id="xInj" class="cnt"></div></div>
 
 <!-- ============ LIVE LEAGUE ============ -->
 <div class="view sv sx" data-tab="live" hidden><div id="xLive" class="cnt"></div></div>
@@ -1597,9 +1599,9 @@ details.al-done .al{margin-top:8px}
 <script src="season2025.js?v=fc3f3bd8"></script>
 <script src="league_tabs.js?v=22035131"></script>
 <script src="decisions.js?v=bed03aeb"></script>
-<script src="season.js?v=5e4f6aa6"></script>
+<script src="season.js?v=6dd022b2"></script>
 <script src="news.js?v=138f824a"></script>
-<script src="app.js?v=fe8dabb7"></script>
+<script src="app.js?v=61b89aab"></script>
 <script>
 "use strict";
 const B = window.BOARD;
@@ -2510,6 +2512,7 @@ function setTab(t){
   if (t === "watch") renderWatch();
   if (t === "week") renderWeek();
   if (t === "fa") renderFA();
+  if (t === "inj") renderInj();
   if (t === "news") renderNews();
 }
 

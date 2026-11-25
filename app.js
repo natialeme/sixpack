@@ -21,7 +21,7 @@ const uAvSrc = (D, uid) => { const u = uOf(D, uid) || {}, m = u.metadata || {}; 
 const uAvI = (D, uid, s) => `<img src="${uAvSrc(D, uid)}" alt="" style="width:${s}px;height:${s}px;border-radius:50%;object-fit:cover;background:#25252b" onerror="this.style.visibility='hidden'">`;
 const nn = v => v == null ? `<span class="dim">·</span>` : f1(v);
 const lastName = n => String(n || "").split(" ").slice(-1)[0];
-const PAGE_T = {archive:"ארכיון דראפט", watch:"מה לשים לב", week: "השבוע שלי", fa: "שוק חופשי", live: "הליגה שלנו", news: "חדשות ועדכונים", draft: "דראפט", teams: "קבוצות", plan: "תכנון", league: "עונה שעברה"};
+const PAGE_T = {archive:"ארכיון דראפט", watch:"מה לשים לב", week: "השבוע שלי", fa: "שוק חופשי", inj: "שחקנים ופציעות", live: "הליגה שלנו", news: "חדשות ועדכונים", draft: "דראפט", teams: "קבוצות", plan: "תכנון", league: "עונה שעברה"};
 // the colour of a manager: you orange, the others one graphite family told apart by shade
 const GRAPH = ["#8a93a1", "#6d7684", "#a9b0bb", "#5c6470", "#c3c8d0"];
 function mgrCol(D, uid){
@@ -140,9 +140,10 @@ const PT = {
   week: [["now", "עכשיו"], ["board", "הלוח"], ["vs", "מול היריב"]],
   fa: [["swap", "החלפות"], ["free", "פנויים"], ["mine", "הסגל שלי"]],
   live: [["mu", "מאצ'אפים"], ["tbl", "טבלה"], ["mv", "מהלכים"]],
-  news: [["games", "משחקים"], ["arts", "כתבות"], ["inj", "פציעות"], ["next", "שבוע הבא"]],
+  news: [["games", "משחקים"], ["arts", "כתבות"], ["next", "שבוע הבא"]],
+  inj: [["mine", "שלך"], ["back", "חוזרים"], ["opp", "הזדמנויות"], ["lg", "בליגה"]],
 };
-const PT_OUT = {week: "xWeek", fa: "xFa", live: "xLive", news: "xNews"};
+const PT_OUT = {week: "xWeek", fa: "xFa", live: "xLive", news: "xNews", inj: "xInj"};
 // ?tab=fa&pt=free opens a sub-tab directly (for links and for the QA captures)
 let qPt = new URLSearchParams(location.search).get("pt");
 function ptOf(t){
@@ -286,7 +287,7 @@ function renderWeek(){
     } else if (slot) { art = `<div class="nx-art slot n">${SLOTS[+slot[1]]}</div>`; cls = " sw"; }
     else if (!first.pid) { art = `<div class="nx-art ic">${xi("alert", 40)}</div>`; cls = " sw"; }
     const when = due ? `<div class="lwhen"><div><div class="k">${due.live ? "המשחק כבר התחיל" : "עד"}</div><div class="n">${esc(due.txt)}</div></div>${!due.live && due.t > Date.now() ? `<div><div class="k">עוד</div><div class="n" data-cd="${due.t}">${cdTxt(due.t)}</div></div>` : ""}</div>` : "";
-    const acts = `<div class="acts">${aActs(first, "")}<a class="btn g" href="${SLEEPER_URL}" target="_blank" rel="noopener">Sleeper${xi("ext", 12)}</a></div>`;
+    const acts = `<div class="acts">${aActs(first, "")}</div>`;
     html.push(`<section class="blk nx${cls} dk-only" aria-label="הדבר הבא"><div class="bh"><h2>הדבר הבא</h2><span class="sp"></span>${alerts.length > 1 ? `<a href="#q" onclick="document.getElementById('q').scrollIntoView({behavior:'smooth',block:'center'});return false">ועוד ${alerts.length - 1} בתור</a>` : ""}</div>
       ${first.pid && !cls ? `<div class="lnxr"><div><h3>${strip(first.title)}</h3><p>${txt}</p>${when}${acts}</div><img src="${PF(first.pid)}" alt="" onerror="this.remove()"></div>` : `<h3>${strip(first.title)}</h3><p>${txt}</p>${art}${when}${acts}`}</section>`);
   } else {
@@ -383,15 +384,16 @@ function renderWeek(){
   };
   const brow = (x, slot) => {
     const [cls, txt] = ACT(x), bench = !stIds.has(x.id);
-    const bar = !bench && !x.locked && x.lastFp != null && x.thr != null ? x.thr : !bench && !x.locked ? x.thrNext : null;
-    const pts = bench ? null : x.pts;
+    // the bench too (Nati, 25.11.2026): his latest score and the bar as if he were in the lineup, in grey (not counted)
+    const bar = !x.locked && x.lastFp != null && x.thr != null ? x.thr : !x.locked ? x.thrNext : null;
+    const pts = bench ? x.lastFp : x.pts;
     const scale = Math.max(45, (x.V[3] ?? x.V.at(-1)) * 1.4);
     const bul = x.locked ? `<div class="bul"><i class="ok" style="width:${Math.min((x.pts || 0) / scale, 1) * 100}%"></i></div>`
-      : pts != null && bar ? `<div class="bul"><i class="${pts >= bar ? "ok" : ""}" style="width:${Math.min(pts / scale, 1) * 100}%"></i><u style="right:${Math.min(bar / scale, 1) * 100}%"></u></div>` : "";
+      : pts != null && bar ? `<div class="bul${bench ? " bn" : ""}"><i class="${pts >= bar ? "ok" : ""}" style="width:${Math.min(pts / scale, 1) * 100}%"></i><u style="right:${Math.min(bar / scale, 1) * 100}%"></u></div>` : "";
     const flag = x.inj ? `<span class="q">${esc(injTxt(x.inj))}</span>` : "";
     const btn = cls === "lock" || cls === "done" ? `<button class="act ${cls}" onclick="toggleLock('${x.id}')" title="${x.pending ? `Sleeper מראה ${f1(x.pending.fp)} מהמשחק ב-${dLbl(x.pending.date)}. אם נעלת אותו, לחיצה מאשרת` : cls === "lock" ? "לחיצה מסמנת שנעלת ב-Sleeper" : "לחיצה מבטלת את הסימון"}">${txt}</button>` : `<span class="act ${cls}">${txt}</span>`;
     return `<tr><td><div class="pl"><span class="sl${slot === "BN" || slot === "IR" ? " BN" : ""}">${slot}</span>${hsI(x.id, 40)}<div><b>${pName(x)}</b> ${flag}<small>${esc(x.team)}</small></div></div></td>
-      ${dates.map(d => cell(x, d)).join("")}<td class="num">${f1(x.m)}</td><td class="num b">${nn(pts)}</td><td class="num pj">${nn(x.locked ? null : bar)}</td><td>${bul}</td><td>${btn}${["lock","wait"].includes(x.act) && !bench && x.left[0] ? "<small>עד "+esc(dueOf(x.team,x.left[0].date).txt)+"</small>" : ""}</td></tr>`;
+      ${dates.map(d => cell(x, d)).join("")}<td class="num">${f1(x.m)}</td><td class="num b${bench ? " hyp" : ""}"${bench && pts != null ? ` title="המשחק האחרון שלו. בספסל זה לא נספר"` : ""}>${nn(pts)}</td><td class="num pj${bench ? " hyp" : ""}"${bench && bar != null ? ` title="הרף אם יהיה בהרכב"` : ""}>${nn(x.locked ? null : bar)}</td><td>${bul}</td><td>${btn}${["lock","wait"].includes(x.act) && !bench && x.left[0] ? "<small>עד "+esc(dueOf(x.team,x.left[0].date).txt)+"</small>" : ""}</td></tr>`;
   };
   const stRows = me.st.map((x, i) => x ? brow(x, SLOTS[i]) : "").join(""), bnRows = me.bench.map(x => brow(x, "BN")).join(""), irRows = me.ir.map(x => brow(x, "IR")).join("");
   const cols = dates.length + 6;
@@ -400,7 +402,7 @@ function renderWeek(){
       <div class="lgd"><span><span class="sc k" style="min-width:26px;line-height:18px;font-size:11.5px">40</span>נעול</span><span><span class="sc av" style="min-width:26px;line-height:18px;font-size:11.5px">21</span>נספר, אפשר לנעול</span><span><i style="display:inline-block;width:2px;height:12px;background:var(--model)"></i>רף</span></div>
       <div class="seg">${[["st", "מתחילים"], ["bn", "ספסל ו-IR"], ["all", "הכל"]].map(([k, t]) => `<button class="${F === k ? "on" : ""}" onclick="S.wkF='${k}';save();renderWeek()">${t}</button>`).join("")}</div></div>
     <div class="tsc"><table class="tb"><thead><tr><th style="width:250px">שחקן</th>${dates.map(d => `<th class="${d === today ? "td" : ""}">${d === today ? `היום · ${dLbl(d)}` : dLbl(d)}<b>${cnt2(all, d)} · ${cnt2(oppAll, d)}</b></th>`).join("")}<th>למשחק</th><th>נספר</th><th>רף</th><th style="width:84px">מול הרף</th><th style="width:96px">מה לעשות</th></tr></thead>
-    <tbody>${F !== "bn" ? stRows : ""}${F !== "st" ? `<tr class="sec"><td colspan="${cols}">ספסל · ${me.bench.length}</td></tr>${bnRows}${irRows ? `<tr class="sec"><td colspan="${cols}">IR</td></tr>${irRows}` : ""}` : ""}</tbody></table></div></section>`);
+    <tbody>${F !== "bn" ? stRows : ""}${F !== "st" ? `<tr class="sec"><td colspan="${cols}">ספסל · ${me.bench.length} · באפור: המשחק האחרון והרף אם יהיה בהרכב, לא נספר</td></tr>${bnRows}${irRows ? `<tr class="sec"><td colspan="${cols}">IR</td></tr>${irRows}` : ""}` : ""}</tbody></table></div></section>`);
   // ---- the opponent's locks (06.11.2026): Sleeper's API shows his lock only once the player plays again, so a game he
   // locked is marked here by hand (toggleOppLock). Same S.locks as yours, but nothing goes to the phone ----
   if (op) {
@@ -436,15 +438,15 @@ function renderWeek(){
   const PF2 = F === "bn" ? "bn" : "st";
   const prowB = (x, slot) => {
     const g = x.g.find(y => y.date === pd), [cls, txt] = ACT(x), bench = !stIds.has(x.id);
-    const bar = !bench && !x.locked && x.lastFp != null && x.thr != null ? x.thr : !bench && !x.locked ? x.thrNext : null;
+    const bar = !x.locked && x.lastFp != null && x.thr != null ? x.thr : !x.locked ? x.thrNext : null;
     const tp = g && !g.done ? tipOf(x.team, pd) : null, vs = g ? `${g.home ? "מול" : "ב-"}${esc(g.opp)}` : "";
     const when = !g ? "לא משחק ביום הזה" : g.done ? (g.fp != null ? `${vs} · <span class="n">${f1(g.fp)}</span>` : `${vs} · לא שיחק`) : `${tp ? `<span class="n">${ilTime(tp.t, false)}</span> ` : ""}${vs}`;
     const right = cls === "lock" || cls === "done" ? `<button type="button" class="chip${cls === "lock" ? " now" : ""}" onclick="toggleLock('${x.id}')">${txt}</button>` : bar != null ? `<small>רף <span class="n">${f1(bar)}</span></small>` : `<small>${txt}</small>`;
-    return `<div class="pbr${cls === "lock" ? " lockme" : ""}"><span class="sl${bench ? " BN" : ""}">${slot}</span>${hsI(x.id, 40)}<div class="tx"><b>${pName(x)}</b><small>${when}${x.left.length ? ` · נשארו ${x.left.length}` : " · סיים"}</small></div><div class="val"><span class="n">${nn(bench ? null : x.pts)}</span>${right}${!bench && ["lock","wait"].includes(x.act) && x.left[0] ? "<small>עד "+esc(dueOf(x.team,x.left[0].date).txt)+"</small>" : ""}</div></div>`; };
+    return `<div class="pbr${cls === "lock" ? " lockme" : ""}"><span class="sl${bench ? " BN" : ""}">${slot}</span>${hsI(x.id, 40)}<div class="tx"><b>${pName(x)}</b><small>${when}${x.left.length ? ` · נשארו ${x.left.length}` : " · סיים"}</small></div><div class="val"><span class="n${bench ? " hyp" : ""}">${nn(bench ? x.lastFp : x.pts)}</span>${right}${!bench && ["lock","wait"].includes(x.act) && x.left[0] ? "<small>עד "+esc(dueOf(x.team,x.left[0].date).txt)+"</small>" : ""}</div></div>`; };
   const chips = gDays.map(d => { const n = me.st.filter(x => x && x.g.some(g => g.date === d)).length;
     return `<button type="button" class="${d === pd ? "on" : ""}${d === nextD ? " nw" : ""}" onclick="SEA.wkDay='${d}';renderWeek()"><b>${dLbl(d)}</b><small>${d < today ? "שוחק · " : d === nextD ? "הבא · " : ""}${n}</small></button>`; }).join("");
   html.push(`<section class="blk pboard ph-only" data-pt="board" aria-label="הלוח של השבוע בטלפון"><div class="pdays">${chips}</div>
-    <div class="pbar"><div class="seg">${[["st", `מתחילים <span class="n">${me.st.filter(Boolean).length}</span>`], ["bn", `ספסל ו-IR <span class="n">${me.bench.length + me.ir.length}</span>`]].map(([k, t]) => `<button type="button" class="${PF2 === k ? "on" : ""}" onclick="S.wkF='${k}';save();renderWeek()">${t}</button>`).join("")}</div><small>נספר עכשיו<br>והרף לנעילה</small></div>
+    <div class="pbar"><div class="seg">${[["st", `מתחילים <span class="n">${me.st.filter(Boolean).length}</span>`], ["bn", `ספסל ו-IR <span class="n">${me.bench.length + me.ir.length}</span>`]].map(([k, t]) => `<button type="button" class="${PF2 === k ? "on" : ""}" onclick="S.wkF='${k}';save();renderWeek()">${t}</button>`).join("")}</div><small>${PF2 === "bn" ? "אחרון והרף<br>אם יהיה בהרכב" : "נספר עכשיו<br>והרף לנעילה"}</small></div>
     <div class="prows">${PF2 === "st" ? me.st.map((x, i) => x ? prowB(x, SLOTS[i]) : "").join("") : [...me.bench.map(x => prowB(x, "BN")), ...me.ir.map(x => prowB(x, "IR"))].join("")}</div>
     <p class="note">הרף הוא כמה צריך כדי לנעול אחרי המשחק, לפי כמה משחקים נשארו. נעלת על ציון ישן? במחשב, לחיצה עליו בלוח.</p></section>`);
 
@@ -512,7 +514,7 @@ function renderFA(){
         <div class="linfo"><div class="lname"><b>${esc(c.p.n)}</b><span class="chip">${esc(c.team)} · ${(c.p.pos || []).join("/")}${c.p.age ? ` · גיל ${c.p.age}` : ""}</span></div>
           <div class="lstrip" style="margin-top:0"><div><small>ערך נעילה ל־3 משחקים</small><span class="n mdl">${f1(c.val)}</span></div><div><small>שלושה אחרונים</small><span class="n mdl">${f1(c.form.l3)}</span></div><div><small>בפועל</small><span class="n">${avgTxt(c.p.id)}</span></div><div><small>דקות העונה</small><span class="n">${f1(c.form.minAll)}</span></div><div><small>השבוע</small><span class="n">${c.left}<em style="font-size:14px;color:var(--tx3)">/${c.games}</em></span></div><div><small>שבוע הבא</small><span class="n">${c.next || "·"}</span></div></div>
           <div class="lout">${hsI(d.id, 52)}<div class="tx"><small>יוצא</small><b>${esc(d.p.n)}</b><small>${esc(d.team)} · ערך ${f1(adjL(d.p))} · בפועל ${avgPlain(d.id)}</small></div><div class="lgain"><span class="n">+${f1(s.g)}</span><small>בשבועיים · פער בערך <span class="n" style="display:inline;font-size:13px;color:var(--tx2);font-weight:700">${gapTxt(c.val - adjL(d.p))}</span><br>השבוע ${gapTxt(s.thisWeek)} · הבא ${gapTxt(s.nextWeek)}</small></div></div>
-          <div class="lacts"><a class="btn w" href="${SLEEPER_URL}" target="_blank" rel="noopener">להחתים ב-Sleeper ${xi("ext", 13)}</a><button class="btn" onclick="openCard('${c.p.id}')">כרטיס שחקן</button></div></div></div></section>`);
+          <div class="lacts"><button class="btn w" onclick="openCard('${c.p.id}')">כרטיס שחקן</button></div></div></div></section>`);
     // the phone: a framed photo, the gain, six numbers in two rows, who goes out, and the two buttons (design/fa-phone.html)
     main.push(`<section class="blk pswap ph-only" data-pt="swap" aria-label="ההחלפה הכי טובה בטלפון"><div class="bh"><h2>ההחלפה הכי טובה</h2><span class="sp"></span>${sw.length > 1 ? `<div class="seg">${sw.map((_, k) => `<button class="${k === i ? "on" : ""}" onclick="SEA.fa.swI=${k};renderFA()" aria-label="החלפה ${k + 1}">${k + 1}</button>`).join("")}</div>` : ""}</div>
       <div class="pswt"><span class="pf"><img src="${PF(c.p.id)}" alt="" onerror="this.style.visibility='hidden'">${tlI(c.team)}</span>
@@ -520,7 +522,7 @@ function renderFA(){
         <div class="pgain"><span class="n">+${f1(s.g)}</span><small>בשבועיים<br>פער בערך <span class="n">${gapTxt(c.val - adjL(d.p))}</span><br>השבוע ${gapTxt(s.thisWeek)} · הבא ${gapTxt(s.nextWeek)}</small></div></div>
       <div class="pg6"><div><small>ערך נעילה ל־3 משחקים</small><span class="n mdl">${f1(c.val)}</span></div><div><small>שלושה אחרונים</small><span class="n">${f1(c.form.l3)}</span></div><div><small>בפועל</small><span class="n">${avgTxt(c.p.id)}</span></div><div><small>דקות העונה</small><span class="n">${f1(c.form.minAll)}</span></div><div><small>השבוע</small><span class="n">${c.left}/${c.games}</span></div><div><small>שבוע הבא</small><span class="n">${c.next || "·"}</span></div></div>
       <div class="pout"><span class="k">יוצא</span>${hsI(d.id, 34)}<div class="tx"><b>${esc(d.p.n)}</b><small>${esc(d.team)} · ערך ${f1(adjL(d.p))} · בפועל ${avgPlain(d.id)}</small></div></div>
-      <div class="pacts p2"><a class="btn pri" href="${SLEEPER_URL}" target="_blank" rel="noopener">להחתים ב-Sleeper ${xi("ext", 14)}</a><button type="button" class="btn" onclick="openCard('${c.p.id}')">כרטיס שחקן</button></div></section>`);
+      <div class="pacts"><button type="button" class="btn pri" onclick="openCard('${c.p.id}')">כרטיס שחקן</button></div></section>`);
   } else main.push(`<section class="blk" data-pt="swap"><div class="bh"><h2>אין הרמה ששווה עכשיו</h2></div><p class="mut">${X.D.txOk === false ? "נתוני הווייבר חסרים. ההחלפות יחושבו אחרי רענון מוצלח." : "אין החלפה שמוסיפה לפחות נקודה צפויה להרכב על פני השבוע הנוכחי והבא."}</p></section>`);
 
   // ---- the table: the headers sort it ----
@@ -577,7 +579,7 @@ function renderFA(){
   const prowF = x => { const ss = seasonSum(x.p.id), tag = x.inj ? `<span class="tag ${isOut(x.inj) ? "out" : "warn"}">${esc(injTxt(x.inj))}${(() => { const e = espnInjOf(x.p.id); return e && e.ret ? ` · ${esc(retTxt(e.ret).replace("חזרה משוערת ", "חוזר "))}` : ""; })()}</span>` : x.waiverUntil ? `<span class="tag">waivers</span>` : faWhy(x).slice(0, 1).map(t => `<span class="tag up">${esc(t)}</span>`).join("");
     return `<div class="pfr${watch.has(x.p.id) ? " hl" : ""}">${star(x)}<span class="pa">${hsI(x.p.id, 40)}${tlI(x.team)}</span><div class="tx"><b>${nameLink(x.p)}</b><small>${(x.p.pos || []).join("/")}${x.p.age ? ` · ${x.p.age}` : ""}${ss ? ((so[0] === "l1" || so[0] === "l2") && ss.last.length ? ` · אחרונים <span class="n">${ss.last.slice(-2).map(f1).join(", ")}</span>` : ` · בפועל <span class="n">${f1(ss.avg)}</span>`) : ""}${tag}</small></div><div class="val"><span class="n">${f1(x.val)}</span><small class="n ${x.gain > 0 ? "mdl" : "lo"}">${gapTxt(x.gain)}</small></div></div>`; };
   const cardV = x => `<article class="lcard"><div class="hdr">${pcell(x)}${star(x)}</div><div class="r2"><span class="n">${f1(x.val)}</span><small>ערך · ${gapCell(x)} מול ${esc(fa.worst ? lastName(fa.worst.p.n) : "החלש")}</small></div><div class="r3"><span>תחזית<b>${f1(x.fc)}</b></span><span>בפועל<b>${seasonSum(x.p.id) ? f1(seasonSum(x.p.id).avg) : "·"}</b></span><span>השבוע<b>${x.left}/${x.games}</b></span><span>דקות<b>${x.wkMin ? Math.round(x.wkMin) : "·"}</b></span></div></article>`;
-  main.push(`<section class="blk" data-pt="free" aria-label="שחקנים פנויים" style="padding-bottom:10px"><div class="bh"><h2>שחקנים פנויים</h2><span class="meta"><span class="n">${total}</span>${V === "t" ? " · לחיצה על כותרת ממיינת" : ""}</span><span class="sp"></span><a href="${SLEEPER_URL}" target="_blank" rel="noopener">Sleeper ${xi("ext", 12)}</a><div class="seg dk-only"><button class="${V === "t" ? "on" : ""}" onclick="SEA.fa.view='t';renderFA()">טבלה</button><button class="${V === "c" ? "on" : ""}" onclick="SEA.fa.view='c';renderFA()">כרטיסים</button></div></div>
+  main.push(`<section class="blk" data-pt="free" aria-label="שחקנים פנויים" style="padding-bottom:10px"><div class="bh"><h2>שחקנים פנויים</h2><span class="meta"><span class="n">${total}</span>${V === "t" ? " · לחיצה על כותרת ממיינת" : ""}</span><span class="sp"></span><div class="seg dk-only"><button class="${V === "t" ? "on" : ""}" onclick="SEA.fa.view='t';renderFA()">טבלה</button><button class="${V === "c" ? "on" : ""}" onclick="SEA.fa.view='c';renderFA()">כרטיסים</button></div></div>
     <div class="ltools"><label class="lsrch">${xi("search", 15)}<input id="faQ" value="${esc(F.q || "")}" placeholder="חיפוש שחקן" oninput="faSearch(this)" aria-label="חיפוש שחקן"></label>
       ${teamSel}
       <div class="seg">${["ALL", "G", "F", "SF", "PF", "C"].map(k => `<button class="${F.pos === k ? "on" : ""}" onclick="SEA.fa.pos='${k}';renderFA()">${k === "ALL" ? "הכל" : k}</button>`).join("")}</div>
@@ -595,39 +597,17 @@ function renderFA(){
     <p class="note">ערך מחושב לשלוש הזדמנויות נעילה לפי הניקוד מהופעות העונה. בהמלצת החלפה משווים את מספר המשחקים שנותרו ואת הממוצעים בפועל של שני השחקנים. פער = מול השחקן הכי חלש אצלך. דקות בפועל: ממוצע עד שלושת המשחקים האחרונים, ללא משחקי היום; בסוגריים ההפרש מתחזית קדם העונה. ↑ = עלייה של 5 דקות ומעלה אחרי 3 משחקים. * = נתוני עבר חסרים. הסימון אינו משנה את הדירוג.</p></section>`);
   html.push(`<div class="lstack" data-pt="swap free">${main.join("")}</div>`);
 
-  // ---- my roster, weakest first: stays beside the table while it scrolls ----
+  // ---- my roster, weakest first, and what Sleeper adds: stay beside the table while it scrolls ----
+  // the injury blocks (back from injury, openings) moved to "שחקנים ופציעות" (25.11.2026)
   const weak = fa.mineAll.filter(x => !x.p.stub).map(x => Object.assign(x, {form_fc: formOf(x.p).fc})).sort((a, b) => a.form_fc - b.form_fc).slice(0, 6);
   const bestFree = fa.list.filter(x => !isOut(x.inj) && x.form.ok).reduce((a, x) => (!a || x.val > a.val ? x : a), null);
   const vals = [...weak.map(x => adjL(x.p)), bestFree ? bestFree.val : 0], lo = Math.min(...vals) * 0.8, hi = Math.max(...vals) * 1.05, pos = v => (v - lo) / (hi - lo || 1) * 100;
-  html.push(`<aside class="lside s3" data-pt="mine"><section class="blk" aria-label="הסגל שלי"><div class="bh"><h2>הסגל שלי</h2><span class="meta">מהחלש לחזק</span></div>
-    <div class="lls">${weak.map(x => { const v = adjL(x.p); return `<div class="lli lwk">${hsI(x.id, 40)}<div><b>${esc(surname(x.p.n))}</b><span class="ltr"><i style="width:${pos(v).toFixed(1)}%;${bestFree && v >= bestFree.val ? "background:var(--tx3)" : ""}"></i>${bestFree ? `<u style="right:${pos(bestFree.val).toFixed(1)}%"></u>` : ""}</span></div><span class="n">${f1(v)}</span></div>`; }).join("")}</div>
-    ${bestFree ? `<div class="note">הקו הסגול: <span class="n" style="font-weight:700">${f1(bestFree.val)}</span>, ${esc(bestFree.p.n)}, הכי טוב שפנוי. מי שהפס שלו לא מגיע לקו שווה בדיקה.</div>` : ""}</section></aside>`);
-
-  // ---- back from injury: key free agents out now, by return date, to pick up before they're back (Nati, 13.11.2026) ----
-  // ESPN's return date; "key" = 17+ points a game in the model or 28+ minutes. Waivers take ~2 days, so the pick-up time is 3 days before.
-  const today0 = dObj(todayUS()).getTime(), daysTo = r => Math.round((dObj(r).getTime() - today0) / DAY);
-  const backs = fa.list.map(x => ({x, e: espnInjOf(x.p.id), pm: PMAP.get(x.p.id) || {}})).filter(o => o.x.inj && isOut(o.x.inj) && o.e && o.e.ret && ((o.pm.fpg || 0) >= 17 || (o.pm.min || 0) >= 28))
-    .map(o => Object.assign(o, {d: daysTo(o.e.ret)})).sort((a, b) => a.d - b.d).slice(0, 10);
-  const myBacks = [...new Set([...(X.myR.players || []), ...(X.myR.reserve || [])])].map(id => ({id, e: espnInjOf(id)})).filter(o => o.e && o.e.ret && o.e.status !== "Day-To-Day").map(o => Object.assign(o, {d: daysTo(o.e.ret)})).sort((a, b) => a.d - b.d);
-  const whenTxt = d => d <= 0 ? "היום" : d === 1 ? "מחר" : `בעוד ${d} ימים`;
-  const actTxt = d => d <= 3 ? `<span class="chip red">להרים עכשיו</span>` : d <= 10 ? `<span class="chip amb">להרים ב-${(() => { const t = new Date(today0 + (d - 3) * DAY); return `${t.getUTCDate()}.${t.getUTCMonth() + 1}`; })()}</span>` : `<span class="chip">לעקוב</span>`;
-  html.push(`<section class="blk s12" data-pt="swap" aria-label="חוזרים מפציעה"><div class="bh"><h2>חוזרים מפציעה</h2><span class="meta">שחקני מפתח פנויים שבחוץ עכשיו, לפי תאריך החזרה של ESPN · כדאי להרים 3 ימים לפני (waivers של יומיים)</span></div>
-    <div class="lls">${backs.map(o => `<div class="lli"><span class="pa">${hsI(o.x.p.id, 52)}${tlI(o.x.team)}</span><div><b>${nameLink(o.x.p)}</b>${watch.has(o.x.p.id) ? ` <span class="chip" style="line-height:18px">במעקב</span>` : ""}<small dir="auto">${esc(o.x.team)} · ${(o.x.p.pos || []).join("/")} · ${f1(o.pm.fpg || 0)} למשחק לפני העונה · ${esc(o.e.short || "").slice(0, 110)}</small></div><span class="lwhen2">${xi("clock")}${esc(retTxt(o.e.ret).replace("חזרה משוערת ", ""))} · ${whenTxt(o.d)}</span>${actTxt(o.d)}${star(o.x)}</div>`).join("") || `<p class="mut">אין כרגע שחקן מפתח פנוי שפצוע עם תאריך חזרה.</p>`}</div>
-    ${myBacks.length ? `<div class="note">הפצועים שלך: ${myBacks.map(o => `<b>${esc(pOf(o.id).n)}</b> ${esc(retTxt(o.e.ret).replace("חזרה משוערת ", ""))} (${whenTxt(o.d)})`).join(" · ")}</div>` : ""}</section>`);
-
-  // ---- injury openings and Sleeper adds ----
-  const opps = [];
-  Object.entries(SEA.pl || {}).forEach(([id, x]) => {
-    if (!x.team || !isOut(injOf(id))) return;
-    const p = PMAP.get(id); if (!p || (p.min || 0) < 26) return;
-    const mates = fa.list.filter(f => f.team === x.team && !isOut(f.inj) && (f.p.pos || []).some(q2 => (p.pos || []).includes(q2))).sort((a, b) => (b.dMin - a.dMin) || (b.val - a.val)).slice(0, 2);
-    if (mates.length) opps.push({p, team: x.team, mates, ret: (espnInjOf(id) || {}).ret});
-  });
   const tr = (X.D.trend || []).filter(t => !fa.rostered.has(t.player_id)).slice(0, 5), mxt = Math.max(1, ...tr.map(t => t.count));
-  html.push(`<section class="blk s7" data-pt="swap" aria-label="הזדמנויות מפציעות"><div class="bh"><h2>הזדמנויות מפציעות</h2><span class="meta">שחקן 26+ דקות בחוץ, ופנויים מאותה קבוצה ועמדה</span></div>
-      <div class="lls">${opps.sort((a, b) => b.p.min - a.p.min).slice(0, 5).map(o => `<div class="lli"><span class="pa">${hsI(o.p.id, 52)}${tlI(o.team)}</span><div><b>${esc(o.p.n)}</b><small dir="auto">${o.mates.map(m => `${esc(m.p.n)}${m.dMin >= 2 ? ` +${Math.round(m.dMin)} דק'` : ""}`).join(", ")}</small></div>${o.ret ? `<span class="lwhen2">${xi("clock")}${esc(retTxt(o.ret).replace("חזרה משוערת ", ""))}</span>` : ""}</div>`).join("") || `<p class="mut">אין כרגע שחקן רוטציה בחוץ עם מחליף פנוי.</p>`}</div></section>
-    <section class="blk s5 ltrend" data-pt="swap" aria-label="מה מוסיפים ב-Sleeper"><div class="bh"><h2>מה מוסיפים ב-Sleeper</h2><span class="meta">24 שעות · רק פנויים</span></div>
-      <div class="lls">${tr.map(t => { const p = pOf(t.player_id); return `<div class="lli" style="min-height:58px">${hsI(t.player_id, 44)}<div><b>${p.stub ? esc(p.n) : nameLink(p)}</b><small>${esc(teamOf(t.player_id))}</small></div><span class="ltrb"><i style="width:${(t.count / mxt * 100).toFixed(0)}%"></i></span><span class="n">${t.count.toLocaleString("en-US")}</span></div>`; }).join("") || `<p class="mut">אין נתונים מ-Sleeper כרגע.</p>`}</div></section>`);
+  html.push(`<aside class="lside s3"><div class="lsst"><section class="blk" data-pt="mine" aria-label="הסגל שלי"><div class="bh"><h2>הסגל שלי</h2><span class="meta">מהחלש לחזק</span></div>
+    <div class="lls">${weak.map(x => { const v = adjL(x.p); return `<div class="lli lwk">${hsI(x.id, 40)}<div><b>${esc(surname(x.p.n))}</b><span class="ltr"><i style="width:${pos(v).toFixed(1)}%;${bestFree && v >= bestFree.val ? "background:var(--tx3)" : ""}"></i>${bestFree ? `<u style="right:${pos(bestFree.val).toFixed(1)}%"></u>` : ""}</span></div><span class="n">${f1(v)}</span></div>`; }).join("")}</div>
+    ${bestFree ? `<div class="note">הקו הסגול: <span class="n" style="font-weight:700">${f1(bestFree.val)}</span>, ${esc(bestFree.p.n)}, הכי טוב שפנוי. מי שהפס שלו לא מגיע לקו שווה בדיקה.</div>` : ""}</section>
+    <section class="blk ltrend" data-pt="swap" aria-label="מה מוסיפים ב-Sleeper"><div class="bh"><h2>מה מוסיפים ב-Sleeper</h2><span class="meta">24 שעות · רק פנויים</span></div>
+      <div class="lls">${tr.map(t => { const p = pOf(t.player_id); return `<div class="lli" style="min-height:56px">${hsI(t.player_id, 40)}<div><b>${p.stub ? esc(p.n) : nameLink(p)}</b><small>${esc(teamOf(t.player_id))}</small><span class="ltrb"><i style="width:${(t.count / mxt * 100).toFixed(0)}%"></i></span></div><span class="n">${t.count.toLocaleString("en-US")}</span></div>`; }).join("") || `<p class="mut">אין נתונים מ-Sleeper כרגע.</p>`}</div></section></div></aside>`);
   out.innerHTML = html.join("");
   applyPT(out, "fa");
   if (F.focus != null) { const el = $("faQ"); if (el) { el.focus(); el.setSelectionRange(F.focus, F.focus); } F.focus = null; }
@@ -757,7 +737,7 @@ function renderLive(){
   const ownerOf = t => { const rid = (Object.values(t.adds || {})[0]) || (Object.values(t.drops || {})[0]) || (t.roster_ids || [])[0]; return Mo.byRid[rid]; };
   html.push(`<section class="blk s6" data-pt="mv" aria-label="מהלכים אחרונים"><div class="bh"><h2>מהלכים אחרונים</h2><span class="meta">כל הליגה, שבועיים</span></div>
     ${tx.map(t => { const o = ownerOf(t) || {}, d = new Date(t.created), adds = Object.keys(t.adds || {}), drops = Object.keys(t.drops || {});
-      return `<div class="lmv">${av(o.uid, 38)}<div><b>${esc(o.name || "")}</b>${adds.map(id => `<span class="ch"><span class="add">+</span>${esc(pOf(id).n)}</span>`).join("")}${drops.map(id => `<span class="ch"><span class="rem">−</span>${esc(pOf(id).n)}</span>`).join("")}</div><time>${d.getDate()}.${d.getMonth() + 1}</time></div>`; }).join("") || `<p class="mut">אין מהלכים בשבועיים האחרונים.</p>`}
+      return `<div class="lmv">${av(o.uid, 38)}<div><b>${esc(o.name || "")}</b><div class="chs">${adds.map(id => `<button type="button" class="ch" onclick="openCard('${id}')">${hsI(id, 28)}<span class="add">+</span>${esc(pOf(id).n)}</button>`).join("")}${drops.map(id => `<button type="button" class="ch out" onclick="openCard('${id}')">${hsI(id, 28)}<span class="rem">−</span>${esc(pOf(id).n)}</button>`).join("")}</div></div><time>${d.getDate()}.${d.getMonth() + 1}</time></div>`; }).join("") || `<p class="mut">אין מהלכים בשבועיים האחרונים.</p>`}
     <div class="note">ב-Lock-in שוק פעיל הוא עוד הזדמנויות לנעילה.</div></section>`);
 
   // ---- the season, week by week ----
@@ -844,23 +824,13 @@ function renderNews(){
   const tags = ids => { const s = [...ids].sort((a, b) => ORD[who(a)] - ORD[who(b)]), n = s.length - 8; return `<div class="ltags">${s.slice(0, 8).map(tag).join("")}${n > 0 ? `<span class="ltag">+${n}</span>` : ""}</div>`; };
   const imgOf = a => ((a.images || []).find(i => i.url) || {}).url, href = a => ((a.links || {}).web || {}).href || "#";
   const list = shown.slice(0, NEWS.more ? 30 : 5);
-  html.push(`<section class="blk s7" data-pt="arts" aria-label="חדשות"><div class="bh"><h2>חדשות</h2><span class="meta">ESPN · ${NEWS.newsAt ? `עודכן ${agoTxt(new Date(NEWS.newsAt).toISOString())}` : "טוען"}</span><span class="sp"></span><div class="seg">${[["all", "הכל"], ["me", "השחקנים שלך"], ["opp", "היריב"], ["fa", "פנויים"], ["lg", "הליגה"]].map(([k, t]) => `<button class="${F === k ? "on" : ""}" onclick="NEWS.f='${k}';renderNews()">${t} <span class="n" style="font-size:12px">${count(k)}</span></button>`).join("")}</div></div>
+  html.push(`<section class="blk s12" data-pt="arts" aria-label="חדשות"><div class="bh"><h2>חדשות</h2><span class="meta">ESPN · ${NEWS.newsAt ? `עודכן ${agoTxt(new Date(NEWS.newsAt).toISOString())}` : "טוען"}</span><span class="sp"></span><div class="seg">${[["all", "הכל"], ["me", "השחקנים שלך"], ["opp", "היריב"], ["fa", "פנויים"], ["lg", "הליגה"]].map(([k, t]) => `<button class="${F === k ? "on" : ""}" onclick="NEWS.f='${k}';renderNews()">${t} <span class="n" style="font-size:12px">${count(k)}</span></button>`).join("")}</div></div>
     ${!NEWS.news ? `<p class="mut">${NEWS.err ? `לא הצלחתי למשוך חדשות מ-ESPN (${esc(NEWS.err)}).` : "טוען חדשות מ-ESPN"}</p>`
       : !shown.length ? `<p class="mut">אין כרגע כתבות בסינון הזה. הפיד מתעדכן כל 10 דקות.</p>`
-      : `${list.map(({a, ids}) => `<div class="lnws">${imgOf(a) ? `<img src="${esc(imgOf(a))}" alt="" loading="lazy">` : `<span></span>`}<div><h3 dir="auto"><a href="${esc(href(a))}" target="_blank" rel="noopener">${esc(a.headline)}</a></h3><time>${agoTxt(a.published)}</time>${tags(ids)}</div></div>`).join("")}
+      : `<div class="lnwg">${list.map(({a, ids}) => `<div class="lnws">${imgOf(a) ? `<img src="${esc(imgOf(a))}" alt="" loading="lazy">` : `<span></span>`}<div><h3 dir="auto"><a href="${esc(href(a))}" target="_blank" rel="noopener">${esc(a.headline)}</a></h3><time>${agoTxt(a.published)}</time>${tags(ids)}</div></div>`).join("")}</div>
         ${shown.length > 5 ? `<div style="text-align:center;margin-top:12px"><button class="btn" onclick="NEWS.more=!NEWS.more;renderNews()">${NEWS.more ? "פחות כתבות" : `עוד ${Math.min(30, shown.length) - 5} כתבות`}</button></div>` : ""}`}</section>`);
 
-  // ---- the injury report: league players only, mine first; beside the news, and scrolls with the page like it (03.11) ----
-  const injRows = [];
-  Object.entries(ESPN.inj || {}).forEach(([n, e]) => { const id = idByName(n); if (id && own.has(id)) injRows.push({id, e, k: who(id)}); });
-  const ord = {me: 0, opp: 1, lg: 2};
-  injRows.sort((a, b) => (ord[a.k] - ord[b.k]) || (new Date(b.e.date) - new Date(a.e.date)));
-  const nMe = injRows.filter(r => r.k === "me").length, nOp = injRows.filter(r => r.k === "opp").length;
-  html.push(`<section class="blk s5" data-pt="inj" aria-label="פציעות בליגה"><div class="bh"><h2>פציעות בליגה</h2><span class="meta"><span class="n">${injRows.length}</span> שחקנים · ${nMe} אצלך · ${nOp} אצל היריב</span></div>
-    <div class="lls">${injRows.slice(0, NEWS.injMore ? 40 : 6).map(({id, e, k}) => { const s = ESPN_ST[e.status] || [e.status, "q"], u = own.get(id);
-      return `<div class="lli lij"><span class="pa">${hsI(id, 52)}${tlI(teamOf(id))}</span><div><b>${nameLink(pOf(id))}</b><div class="ow" style="--c:${col(u)}"><i></i>${esc(tName(D, u))}${k === "me" ? " · שלך" : k === "opp" ? " · היריב" : ""}</div><p dir="auto">${esc(e.short || "")}</p>${e.ret ? `<div class="bk">${retTxt(e.ret)}</div>` : ""}</div><span class="chip ${s[1] === "out" ? "red" : s[1] === "ok" ? "" : "amb"}">${esc(s[0])}</span></div>`; }).join("")
-      || `<p class="mut">${ESPN.inj ? "אין פצועים בסגלים של הליגה." : "טוען את דוח הפציעות"}</p>`}</div>
-    ${injRows.length > 6 ? `<div style="text-align:center;margin-top:10px"><button class="btn" onclick="NEWS.injMore=!NEWS.injMore;renderNews()">${NEWS.injMore ? "פחות" : `עוד ${injRows.length - 6} פצועים`}</button></div>` : ""}</section>`);
+  // the injury report moved to "שחקנים ופציעות" (25.11.2026); the news takes the whole row, in two columns
 
   // ---- moves: the NBA (ESPN) or the league (Sleeper) ----
   const TF = NEWS.txF || "nba";
@@ -985,8 +955,7 @@ function openCardSeason(id){
         <h6>שורה סטטיסטית למשחק</h6>
         <div class="cd-table-scroll"><table class="cd-t"><tr><th></th><th class="num">נק'</th><th class="num">ריב'</th><th class="num">אס'</th><th class="num">חט'</th><th class="num">חס'</th><th class="num">איב'</th><th class="num">3</th><th class="num">דק'</th></tr>${line("תחזית", p.pl)}${line("עונה שעברה", p.ll, true)}</table></div>
         ${calcHtml(p)}</section></div>
-    <div class="cd-f paper"><button class="btn lt" type="button" onclick="toggleStar('${id}')">${xi("star", 14)}${isStar(id) ? "ברשימת המעקב" : "לרשימת המעקב"}</button><span class="sp"></span>
-      <a class="btn ${fa ? "lime" : ""}" href="${SLEEPER_URL}" target="_blank" rel="noopener">${fa ? "להחתים ב-Sleeper" : "Sleeper"} ${xi("ext", 13)}</a></div>`;
+    <div class="cd-f paper"><button class="btn lt" type="button" onclick="toggleStar('${id}')">${xi("star", 14)}${isStar(id) ? "ברשימת המעקב" : "לרשימת המעקב"}</button><span class="sp"></span></div>`;
   if (!dlg.open) dlg.showModal();
   dlg.setAttribute("tabindex", "-1"); dlg.focus({preventScroll: true});     // the first button would take the focus ring
   cardLog(p);
@@ -1054,58 +1023,240 @@ async function cardLog(p, season){
   if (sumBox) sumBox.innerHTML = `${strip.replace("cd-sum", "cd-sum cd-sum3")}${review}${chart.replace("cd-chart", "cd-chart cd-mini")}`;
 }
 
+// a second press on "מחכה" takes the choice back (here only: the phone already got its "missed" notice)
+function unwaitLock(key){
+  delete ackOf()[key];
+  S.lockOut = (S.lockOut || []).filter(k => k !== `missed|${key}`); save();
+  refreshAlerts(); rerenderSeason();
+}
+// ---------- "מה לשים לב" (rebuilt 25.11.2026, Nati: "לאפיין מחדש באופן נכון ומוסיף, ובלי הרווחים") ----------
+// What needs you this week, in the order it comes due: the next decision on top with its reason, every open starter in
+// one table by when his decision is due (an injury and its "if he misses" bar inside his row, not in a block of its own),
+// what to fix in the lineup before the next slate, the pick-ups that pay this week, and free players whose minutes rise
+// while a teammate is out. Rows of the 12-column grid always add up to 12, so no block stands beside empty space.
+// The injuries themselves live in "שחקנים ופציעות".
+const untilTxt = ms => {
+  const m = Math.round((ms - Date.now()) / 60000);
+  if (m <= 0) return "עכשיו";
+  if (m < 60) return `בעוד ${m} דק׳`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `בעוד ${h} ש׳${h < 3 && m % 60 >= 5 ? ` ו-${m % 60} דק׳` : ""}`;
+  const d = Math.round(h / 24);
+  return d === 1 ? "מחר" : `בעוד ${d} ימים`;
+};
 function renderWatch(){
   const out = $("xWatch");
   startSeasonTimer();
   if (xGate(out)) return;
   const X = seasonState();
-  if (!X?.myR) { out.textContent = "הקבוצה שלך לא נמצאה בליגה הזאת."; return; }
-  const starters = X.me.st.filter(Boolean);
-  const upcoming = starters.filter(x=>!x.locked && !x.pending && !x.uncertain && x.left.length && !x.g.some(g=>g.live))
-    .sort((a,b)=>tipAt(a.team,a.left[0].date)-tipAt(b.team,b.left[0].date));
-  const gapTxt=v=>(v>0?"+":"")+f1(v);
-  const metric=(label,value)=>`<div class="watchMetric"><small>${esc(label)}</small><strong dir="auto">${esc(String(value))}</strong></div>`;
-  const row=(p,sub,content)=>`<article class="watchItem">
-    <button class="watchPerson" type="button" onclick="openCard('${esc(p.id)}')">${hsI(p.id,50)}
-    <span><bdi>${esc(p.n)}</bdi><small>${esc(sub)}</small></span></button>${content}</article>`;
-  const group=(key,title,rows,empty)=>`<section class="blk watchPanel ${key}"><div class="bh"><h2>${title}</h2><span class="watchCount">${rows.length}</span></div>
-    ${rows.length?rows.join(""):`<p class="watchEmpty">${empty}</p>`}</section>`;
-  const deadline = x => { const g=tipOf(x.team,x.left[0].date); return g ? new Date(g.t).toLocaleString("he-IL",{timeZone:"Asia/Jerusalem",day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"}) : x.left[0].date; };
-  const locks=upcoming.filter(x=>x.lastFp!=null).map(x=>row(x.p,`עד ${deadline(x)}`,
-    `<div class="watchDecision">${x.act==="lock"?"לנעול":"לחכות"}</div><div class="watchStats">${metric("נקודות ביד",f1(x.lastFp))}${metric("סף נעילה",f1(x.thr))}</div>`));
-  const injuries=upcoming.filter(x=>x.inj).map(x=>{
-    const miss=x.V[Math.max(0,x.left.length-1)];
-    const change=x.lastFp!=null && x.lastFp>=miss && x.lastFp<x.V[x.left.length];
-    return row(x.p,`${x.team} · ${injTxt(x.inj)}`,`<div class="watchStats">${metric("המשחק הקרוב",deadline(x))}
-      ${x.lastFp==null?"":metric("סף אם כשיר",f1(x.V[x.left.length]))+metric("סף אם יחמיץ",f1(miss))}</div>
-      ${change?'<p class="watchDecision">אם יחמיץ, כדאי לנעול</p>':""}`);
+  if (!X?.myR) { out.innerHTML = `<section class="blk s12"><p class="mut">הקבוצה שלך לא נמצאה בליגה הזאת.</p></section>`; return; }
+  const {me, plan, Wm} = X, html = [];
+  const sgn = v => `${v >= 0 ? "+" : "−"}${f1(Math.abs(v))}`;
+  const st = me.st.filter(Boolean), stIds = new Set(st.map(x => x.id));
+  const live = x => x.g.some(g => g.live);
+  const nextTip = x => x.left.length ? tipAt(x.team, x.left[0].date) : Infinity;
+  // every starter still open this week: playing now first, then by his next tip-off
+  const open = st.filter(x => !x.locked && (x.left.length || live(x))).sort((a, b) => (live(b) - live(a)) || (nextTip(a) - nextTip(b)));
+  const nLocked = st.filter(x => x.locked).length, nDone = st.filter(x => !x.locked && !x.left.length && !live(x)).length;
+  const whenTxt = x => { if (live(x)) return "משחק עכשיו"; const g = x.left[0], t = tipOf(x.team, g.date); return t && t.t ? ilTime(t.t) : dLbl(g.date); };
+  const vsTxt = x => { const g = x.left[0] || x.g.find(y => y.live); return g ? `מול <bdi dir="ltr">${esc(g.opp)}</bdi>` : ""; };
+  // the bar of the decision: lock the latest score from thr up; one who hasn't played yet gets the bar after his next game
+  const barOf = x => x.lastFp != null ? x.thr : x.thrNext;
+  const dec = x => live(x) ? {k: "live", t: "משחק עכשיו"} : x.uncertain || x.pending ? {k: "chk", t: "לבדוק ב-Sleeper"}
+    : x.act === "lock" ? {k: "lock", t: "לנעול"} : x.act === "wait" ? {k: "wait", t: "לחכות"}
+    : x.act === "out" ? {k: "out", t: "להוציא מההרכב"} : x.act === "ahead" ? {k: "ahead", t: "עוד לא שיחק"} : {k: "", t: ""};
+  const w = X.D.week, lkKey = x => `lock|${w}|${x.id}|${x.lastDate}`, waited = x => !!x.lastDate && !!ackOf()[lkKey(x)];
+  const wLockBtns = (x, big) => x.lastFp == null || x.locked || !x.lastDate || live(x) ? "" : `<div class="wlk${big ? " big" : ""}"><button type="button" class="btn lk" onclick="toggleLock('${x.id}')">${xi("lock", 13)}נעלתי</button><button type="button" class="btn wt${waited(x) ? " on" : ""}" onclick="${waited(x) ? "unwaitLock" : "skipLock"}('${lkKey(x)}'${waited(x) ? "" : ",1"})" aria-pressed="${waited(x)}" title="${waited(x) ? "לחיצה מבטלת" : "לא נועלים עכשיו. אחרי המשחק הבא הסף נבדק שוב"}">${waited(x) ? xi("check", 13) : ""}${big && !waited(x) ? "לא נועל, מחכה" : "מחכה"}</button></div>`;
+  const decChip = d => d.k ? `<span class="wrec ${d.k}"><i></i>${d.t}</span>` : "";
+  // an injured starter who already scored: the bar if he plays all his games and the bar if he misses one (the old "פציעות בהרכב")
+  const ifMiss = x => { if (!x.inj || x.lastFp == null || !x.left.length) return null; const miss = x.V[Math.max(0, x.left.length - 1)], fit = x.V[x.left.length]; return {miss, fit, flip: x.lastFp >= miss && x.lastFp < fit}; };
+  const why = x => {
+    const d = dec(x), thr = barOf(x), n = x.left.length;
+    if (d.k === "lock") return `${f1(x.lastFp)} ביד, מעל הסף ${f1(thr)}: יותר ממה שצפוי ${n === 1 ? "מהמשחק שנשאר" : `מ-${n} המשחקים שנשארו`}.`;
+    if (d.k === "wait") return `${f1(x.lastFp)} ביד, ${f1(thr - x.lastFp)} מתחת לסף ${f1(thr)}. ${n === 1 ? "נשאר משחק אחד" : `נשארו ${n} משחקים`} לשפר.`;
+    if (d.k === "ahead") return thr != null ? `עוד לא שיחק השבוע. אחרי המשחק הבא: לנעול מ-${f1(thr)} ומעלה.` : "משחק אחד נשאר, והניקוד שלו ייספר.";
+    if (d.k === "chk") return "Sleeper הראה שני ניקודים שונים מאז המשחק האחרון. לבדוק שם אם הוא נעול.";
+    if (d.k === "out") return `${injTxt(x.inj)} ובלי ניקוד השבוע: בהרכב הוא שווה 0.`;
+    return "";
+  };
+
+  // ---- 1. the next decision ----
+  // the next thing to do (lock, check Sleeper, take out) before the next "wait": a wait asks nothing of you
+  const todo = x => !live(x) && (x.uncertain || x.pending || (x.act === "lock" && !waited(x)) || x.act === "out");
+  const h = open.find(todo) || open.find(x => !live(x) && (x.act === "lock" || x.act === "wait")) || open.find(x => !live(x)) || null;
+  if (h) {
+    const d = dec(h), thr = barOf(h), gap = h.lastFp != null && thr != null ? h.lastFp - thr : null, im = ifMiss(h);
+    html.push(`<section class="blk s12 whero ${d.k}" aria-label="ההחלטה הבאה"><div class="whrec"><small>המלצה</small>${esc(d.t)}</div><div class="whp"><img src="${PF(h.id)}" alt="" onerror="this.style.visibility='hidden'">${tlI(h.team)}</div>
+      <div class="wht"><small class="wk">ההחלטה הבאה · עד ${esc(whenTxt(h))} · ${untilTxt(nextTip(h))}</small><b>${pName(h)}</b><small>${esc(h.team)} · ${(h.p.pos || []).join("/")} · המשחק הבא ${vsTxt(h)}${h.inj ? ` · <span class="chip ${isOut(h.inj) ? "red" : "amb"}">${esc(injTxt(h.inj))}</span>` : ""}</small>
+        <p>${esc(why(h))}${im && im.flip ? ` אם יחמיץ את המשחק הבא, הסף יורד ל-${f1(im.miss)} וכדאי לנעול.` : ""}</p></div>
+      <div class="whn"><div><small>ביד</small><span class="n">${h.lastFp != null ? f1(h.lastFp) : "·"}</span></div><div><small>${h.lastFp != null ? "סף נעילה" : "סף אחרי המשחק"}</small><span class="n mdl">${thr != null ? f1(thr) : "·"}</span></div><div><small>פער</small><span class="n ${gap == null ? "" : gap >= 0 ? "gd" : "lo"}">${gap == null ? "·" : sgn(gap)}</span></div><div><small>נשארו</small><span class="n">${h.left.length}<i>/${h.g.length}</i></span></div></div>
+      <div class="whd">${wLockBtns(h, true)}</div></section>`);
+  } else html.push(`<section class="blk s12 whero none" aria-label="ההחלטה הבאה"><div class="wht"><small class="wk">ההחלטה הבאה</small><b>אין החלטה פתוחה השבוע</b><p>${nLocked} נעולים${nDone ? ` · ${nDone} סיימו את השבוע` : ""}. אין פותח שעוד משחק השבוע בלי נעילה.</p></div></section>`);
+
+  // ---- 2. every open decision, by when it is due ----
+  const bar = (x, thr) => { if (x.lastFp == null || thr == null) return ""; const top = Math.max(thr, x.lastFp) * 1.12 || 1;
+    return `<span class="wbar${x.lastFp >= thr ? " ok" : ""}"><i style="width:${(x.lastFp / top * 100).toFixed(1)}%"></i><u style="right:${(thr / top * 100).toFixed(1)}%"></u></span>`; };
+  const inj = x => x.inj ? ` <span class="chip ${isOut(x.inj) ? "red" : "amb"}">${esc(injTxt(x.inj))}</span>` : "";
+  const missNote = x => { const im = ifMiss(x); return !im ? "" : im.flip ? `<small class="wmiss on">אם יחמיץ: לנעול (סף ${f1(im.miss)})</small>` : `<small class="wmiss">אם יחמיץ: סף ${f1(im.miss)}</small>`; };
+  const slotOf = x => SLOTS[me.st.indexOf(x)] || "";
+  const trow = x => { const d = dec(x), thr = barOf(x), gap = x.lastFp != null && thr != null ? x.lastFp - thr : null;
+    return `<tr class="${x === h ? "wnx" : ""}"><td style="text-align:right"><div class="pl">${hsI(x.id, 40)}<div><b>${pName(x)}</b>${inj(x)}<small>${esc(x.team)} · ${esc(slotOf(x))}</small></div></div></td>
+      <td><span class="wt">${esc(whenTxt(x))}</span><small class="dim">${live(x) ? "" : `${untilTxt(nextTip(x))} · `}${vsTxt(x)}</small></td>
+      <td class="num">${x.left.length}<span class="dim">/${x.g.length}</span></td><td class="num b">${x.lastFp != null ? f1(x.lastFp) : `<span class="dim">·</span>`}</td>
+      <td class="num pj">${thr != null ? f1(thr) : `<span class="dim">·</span>`}${x.lastFp == null && thr != null ? `<small class="dim">אחרי המשחק</small>` : ""}</td>
+      <td class="wgp">${gap == null ? `<span class="dim">·</span>` : `<span class="n ${gap >= 0 ? "gd" : "lo"}">${sgn(gap)}</span>${bar(x, thr)}`}</td>
+      <td>${decChip(d)}${missNote(x)}${wLockBtns(x)}</td></tr>`; };
+  const prow = x => { const d = dec(x), thr = barOf(x);
+    return `<div class="pfr wpr"><span class="pa">${hsI(x.id, 40)}${tlI(x.team)}</span><div class="tx"><b>${pName(x)}</b><small>${esc(whenTxt(x))} · ${vsTxt(x)} · נשארו ${x.left.length}${x.inj ? ` · ${esc(injTxt(x.inj))}` : ""}</small>${missNote(x)}${wLockBtns(x)}</div>
+      <div class="wpv">${decChip(d)}<small class="n">${x.lastFp != null ? f1(x.lastFp) : "·"} / <span class="mdl">${thr != null ? f1(thr) : "·"}</span></small></div></div>`; };
+  const tbl = `<section class="blk s8 wdec" aria-label="ההחלטות השבוע"><div class="bh"><h2>ההחלטות השבוע</h2><span class="meta">${open.length} פתוחים · ${nLocked} נעולים${nDone ? ` · ${nDone} סיימו` : ""} · לפי שעת המשחק</span></div>
+    ${open.length ? `<div class="tsc dk-only"><table class="tb wtb"><thead><tr><th style="text-align:right">שחקן</th><th>עד</th><th>נשארו</th><th>ביד</th><th title="ניקוד שמעליו כדאי לנעול">סף</th><th>פער</th><th>מה לעשות</th></tr></thead><tbody>${open.map(trow).join("")}</tbody></table></div>
+      <div class="plist ph-only">${open.map(prow).join("")}</div>` : `<p class="wok">${xi("check", 16)}כל הפותחים נעולים או סיימו את השבוע.</p>`}
+    <div class="note">סף = הניקוד שמעליו נועלים, לפי המשחקים שנשארו לו. "אם יחמיץ" = הסף אם יפספס את המשחק הקרוב.</div></section>`;
+
+  // ---- 3. the lineup before the next slate: empty slots, starters worth 0, and who to put in (todayPlan) ----
+  const fixes = [];
+  me.st.forEach((x, i) => {
+    if (!x) fixes.push({t: `משבצת ${SLOTS[i]} ריקה`, s: "להכניס שחקן שמשחק השבוע"});
+    else if (x.locked || live(x)) return;
+    else if (!x.g.length) fixes.push({x, t: `${surname(x.p.n)} בלי משחקים השבוע`, s: `${SLOTS[i]} · בהרכב הוא שווה 0`});
+    else if (!x.left.length && x.lastFp == null) fixes.push({x, t: `${surname(x.p.n)} סיים בלי ניקוד`, s: `${SLOTS[i]} · לתת את המשבצת למי שעוד משחק`});
+    else if (isOut(x.inj) && x.lastFp == null && x.left.length) fixes.push({x, t: `${surname(x.p.n)} ${injTxt(x.inj)}`, s: `${SLOTS[i]} · בהרכב הוא שווה 0`});
   });
-  const moves=bestSwaps(X,3,true).filter(r=>Number(f1(r.thisWeek))>0).map(r=>row(r.c.p,`במקום ${r.d.p.n}`,
-    `<div class="watchStats">${metric("תוספת השבוע",gapTxt(r.thisWeek))}${metric("בשבוע הבא",gapTxt(r.nextWeek))}
-    ${r.missGain==null?"":metric("אם יחמיץ משחק",gapTxt(r.missGain))}</div>`));
-  const roles=[];
-  const absent=B.players.filter(p=>isOut(injOf(p.id)));
-  for(const c of X.fa.list.filter(c=>c.role).sort((a,b)=>b.role.delta-a.role.delta)){
-    const games=seasonLog(c.p.id).filter(g=>g[6]===c.team);
-    for(const mate of absent.filter(p=>teamOf(p.id)===c.team && p.id!==c.p.id)){
-      const seen=seasonLog(mate.id).filter(g=>g[6]===c.team);
-      if(!seen.length) continue;
-      const dates=new Set(seen.map(g=>g[0]));
-      const sample=games.filter(g=>g[0]>=seen[0][0]);
-      const withMate=sample.filter(g=>dates.has(g[0])), without=sample.filter(g=>!dates.has(g[0]));
-      if(withMate.length<2 || without.length<2) continue;
-      const mins=rows=>f1(mean(rows.map(g=>g[3]/60)));
-      roles.push(row(c.p,`${mate.n} · ${injTxt(injOf(mate.id))}`,`<div class="watchStats">
-        ${metric(`עם ${surname(mate.n)} · ${withMate.length} הופעות`,mins(withMate)+" דק׳")}
-        ${metric(`בלעדיו · ${without.length} הופעות`,mins(without)+" דק׳")}</div>`));
+  const slateTxt = plan && plan.slate ? (plan.slate === Wm.today ? "הלילה" : dLbl(plan.slate)) : "";
+  const nTonight = plan && plan.tonight ? [...plan.tonight.keys()].filter(id => stIds.has(id)).length : 0;
+  const pl = x => `<span class="wpi">${hsI(x.id, 30)}<b>${esc(surname(x.p.n))}</b>${plan.worth && plan.worth(x) != null ? `<span class="n">${f1(plan.worth(x))}</span>` : ""}</span>`;
+  const lineup = `<section class="blk" aria-label="ההרכב"><div class="bh"><h2>${slateTxt ? `ההרכב ל${slateTxt === "הלילה" ? "הלילה" : `-${slateTxt}`}` : "ההרכב"}</h2>${plan && plan.at ? `<span class="meta">עד ${ilTime(plan.at)}</span>` : ""}</div>
+    ${plan && plan.ins.length ? `<div class="wln"><small>להכניס</small><div>${plan.ins.map(pl).join("")}</div><small>להוציא</small><div>${plan.outs.map(pl).join("") || `<span class="dim">משבצת ריקה</span>`}</div></div>` : ""}
+    ${fixes.map(f => `<div class="lli wfx">${f.x ? hsI(f.x.id, 36) : `<span class="wfi">${xi("alert", 16)}</span>`}<div><b>${esc(f.t)}</b><small>${esc(f.s)}</small></div></div>`).join("")}
+    ${!(plan && plan.ins.length) && !fixes.length ? `<p class="wok">${xi("check", 16)}ההרכב מסודר${slateTxt ? `. ${nTonight} מהפותחים שלך משחקים ${slateTxt === "הלילה" ? "הלילה" : `ב-${slateTxt}`}` : ""}.</p>` : ""}</section>`;
+
+  // ---- 4. pick-ups that pay this week ----
+  const moves = bestSwaps(X, 3, true).filter(r => r.thisWeek >= 0.1);
+  const swaps = `<section class="blk" aria-label="החלפות השבוע"><div class="bh"><h2>החלפות השבוע</h2><span class="sp"></span><a href="#" onclick="setTab('fa');return false">לשוק ←</a></div>
+    ${moves.map(r => `<div class="lli wsw"><span class="pa">${hsI(r.c.p.id, 40)}${tlI(r.c.team)}</span><div><b>${nameLink(r.c.p)}</b><small>במקום ${esc(r.d.p.n)}${r.missGain != null ? ` · אם יחמיץ משחק ${sgn(r.missGain)}` : ""}</small></div><div class="wsg"><span class="n gd">${sgn(r.thisWeek)}</span><small>השבוע · הבא ${sgn(r.nextWeek)}</small></div></div>`).join("")
+      || `<p class="wok dim">${X.D.txOk === false ? "נתוני ההעברות חסרים כרגע." : "אין החלפה שמוסיפה עשירית נקודה ומעלה השבוע."}</p>`}</section>`;
+
+  // ---- 5. free players whose minutes rise while a teammate is out ----
+  const roles = [];
+  const absent = B.players.filter(p => isOut(injOf(p.id)));
+  for (const c of X.fa.list.filter(c => c.role).sort((a, b) => b.role.delta - a.role.delta)) {
+    const games = seasonLog(c.p.id).filter(g => g[6] === c.team);
+    for (const mate of absent.filter(p => teamOf(p.id) === c.team && p.id !== c.p.id)) {
+      const seen = seasonLog(mate.id).filter(g => g[6] === c.team);
+      if (!seen.length) continue;
+      const dates = new Set(seen.map(g => g[0]));
+      const sample = games.filter(g => g[0] >= seen[0][0]);
+      const withMate = sample.filter(g => dates.has(g[0])), without = sample.filter(g => !dates.has(g[0]));
+      if (withMate.length < 2 || without.length < 2) continue;
+      const mins = rows => mean(rows.map(g => g[3] / 60));
+      roles.push({c, mate, w: mins(withMate), nw: withMate.length, wo: mins(without), nwo: without.length});
       break;
     }
-    if(roles.length===3) break;
+    if (roles.length === 3) break;
   }
-  out.innerHTML=group("lockPanel","נעילות לפי שעת המשחק",locks,"אין כרגע ניקוד שמחכה לנעילה.")+
-    group("injPanel","פציעות בהרכב",injuries,"אין דיווח פציעה אצל הפותחים הזמינים להחלטה.")+
-    group("movePanel","החלפות לשבוע הקרוב",moves,X.D.txOk===false?"נתוני ההעברות חסרים כרגע.":"אין כרגע החלפה עם שיפור צפוי של עשירית נקודה ומעלה.")+
-    group("rolePanel","מי מקבל יותר דקות?",roles,"אין כרגע עליית דקות עם מספיק הופעות להשוואה.");
+  const rolesB = `<section class="blk" aria-label="מי מקבל יותר דקות"><div class="bh"><h2>מי מקבל יותר דקות</h2><span class="sp"></span><a href="#" onclick="openRoleMarket();return false">לכל השינויים ←</a></div><p class="wsub">פנויים שמשחקים יותר כשחבר קבוצה בחוץ</p>
+    ${roles.length ? `<div class="wrl">${roles.map(o => { const dm = o.wo - o.w; return `<article class="wrc"><div class="wrh"><span class="pa">${hsI(o.c.p.id, 48)}${tlI(o.c.team)}</span><div class="tx"><b>${nameLink(o.c.p)}</b><small>${esc(o.c.team)} · ${(o.c.p.pos || []).join("/")} · ערך <span class="n">${f1(o.c.val)}</span></small></div></div>
+      <div class="wrm"><div><small>עם ${esc(surname(o.mate.n))} · ${o.nw} הופעות</small><span class="n">${f1(o.w)}</span></div><span class="wra">${xi("chev", 16)}</span><div><small>בלעדיו · ${o.nwo} הופעות</small><span class="n">${f1(o.wo)}</span></div><div class="wrd"><small>דקות</small><span class="n ${dm >= 0 ? "gd" : "lo"}">${sgn(dm)}</span></div></div>
+      <small class="wrw"><span class="chip red">${esc(injTxt(injOf(o.mate.id)))}</span> ${esc(o.mate.n)}${espnInjOf(o.mate.id)?.ret ? ` · חוזר ${ijDate(espnInjOf(o.mate.id).ret)}` : ""}</small></article>`; }).join("")}</div>`
+      : `<p class="wok dim">אין כרגע עליית דקות עם מספיק הופעות להשוואה.</p>`}</section>`;
+  html.push(tbl, `<div class="side s4 wside">${lineup}${swaps}${rolesB}</div>`);
+  out.innerHTML = html.join("");
+}
+
+// ---------- "שחקנים ופציעות" (Nati, 25.11.2026) ----------
+// Every injury in one tab: yours (where he sits, what he misses this week, the IR), free key players coming back with when
+// to pick them up (waivers take ~2 days), the openings an injury leaves for free teammates, and the injured on the other
+// rosters, this week's opponent first. Moved here from the market (13.11) and the news (03.11). Red/amber = injury only.
+const INJ = {more: false, u: ""};
+const ijDays = r => Math.round((dObj(r).getTime() - dObj(todayUS()).getTime()) / DAY);
+const ijWhen = d => d <= 0 ? "היום" : d === 1 ? "מחר" : `בעוד ${d} ימים`;
+const ijDate = r => retTxt(r).replace("חזרה משוערת ", "");
+function renderInj(){
+  const out = $("xInj");
+  startSeasonTimer();
+  if (xGate(out)) return;
+  const X = seasonState();
+  if (!X || !X.myR) { out.innerHTML = `<section class="blk s12"><p class="mut">לא מצאתי את הקבוצה שלך בליגה הזאת.</p></section>`; return; }
+  const {D, me, op, fa} = X, watch = new Set(S.faWatch || []), own = ownerMap(X), oppU = op ? op.uid : null;
+  const stOf = e => ESPN_ST[e.status] || [e.status, "q"];
+  const star = x => `<button type="button" class="star${watch.has(x.p.id) ? " on" : ""}" onclick="toggleWatch('${x.p.id}')" aria-label="מעקב" title="${watch.has(x.p.id) ? "להוריד ממעקב" : "למעקב"}">${xi("star", 15)}</button>`;
+
+  // ---- 1. yours ----
+  const irN = D.lg.settings.reserve_slots || 0, irFree = irN > me.ir.length;
+  const mine = [...me.st, ...me.bench, ...me.ir].filter(Boolean).map(x => ({x, e: espnInjOf(x.id)}))
+    .filter(o => o.x.inj || (o.e && o.e.status !== "Probable"))
+    .map(o => { const e = o.e, out = isOut(o.x.inj) || (!!e && stOf(e)[1] === "out"); return Object.assign(o, {out, si: me.st.indexOf(o.x), ir: me.ir.includes(o.x), d: e && e.ret ? ijDays(e.ret) : null}); })
+    .sort((a, b) => ((b.si >= 0) - (a.si >= 0)) || (b.out - a.out) || ((a.d ?? 99) - (b.d ?? 99)));
+  const nOut = mine.filter(o => o.out).length;
+  const mineCard = ({x, e, out, si, ir, d}) => {
+    const lbl = x.inj ? injTxt(x.inj) : stOf(e)[0], ret = e && e.ret;
+    const miss = out ? (ret ? x.left.filter(g => g.date < ret).length : x.left.length) : null;
+    const ss = seasonSum(x.id), tp = x.left.length ? tipOf(x.team, x.left[0].date) : null;
+    const act = si >= 0 && !x.locked && out && x.lastFp == null && x.left.length ? ["now", `להוציא מההרכב: כרגע הוא שווה 0 במשבצת ${SLOTS[si]}`]
+      : out && !ir && irFree && (d == null || d > 6) ? ["", `יש מקום פנוי ב-IR (${me.ir.length} מתוך ${irN})`]
+      : ir && d != null && d <= 3 ? ["", "חוזר בקרוב: לפנות לו מקום בסגל"]
+      : si >= 0 && !x.locked && !out && x.left.length ? ["amb", `לבדוק את הסטטוס לפני ${tp && tp.t ? ilTime(tp.t) : dLbl(x.left[0].date)}`] : null;
+    // one row a player: who and where | status and return | season average | this week | ESPN's word | what to do
+    return `<article class="ijr ${out ? "out" : "q"}">
+      <div class="ijh"><span class="pa">${hsI(x.id, 48)}${tlI(x.team)}</span><div class="tx"><b>${pName(x)}</b><small>${esc(x.team)} · ${(x.p.pos || []).join("/")} · ${si >= 0 ? `בהרכב (${SLOTS[si]})` : ir ? "ב-IR" : "בספסל"}${x.locked ? ` · נעול ${f1(x.pts || 0)}` : ""}</small></div></div>
+      <div class="ijst"><span class="chip ${out ? "red" : "amb"}">${esc(lbl)}</span><small>${ret ? `חוזר <span class="n">${ijDate(ret)}</span> · ${ijWhen(d)}` : "אין תאריך חזרה"}</small></div>
+      <div class="ijv"><small>ממוצע עונה</small><span class="n">${ss ? f1(ss.avg) : "·"}</span></div>
+      <div class="ijv"><small>נשארו השבוע</small><span class="n">${x.left.length}<i>/${x.g.length}</i></span>${miss ? `<em>יחמיץ ${miss}</em>` : ""}</div>
+      <p class="ijn" dir="ltr" lang="en">${e && e.short ? esc(e.short) : ""}</p>
+      ${act ? `<div class="ija ${act[0]}">${xi(act[0] ? "alert" : "check", 14)}<span>${esc(act[1])}</span></div>` : `<div></div>`}</article>`;
+  };
+  const html = [ptabsHtml("inj", {mine: mine.length})];
+  html.push(`<section class="blk s12" data-pt="mine" aria-label="הפצועים שלך"><div class="bh"><h2>הפצועים שלך</h2><span class="meta">${mine.length ? `${nOut} בחוץ · ${mine.length - nOut} בספק · ` : ""}IR ${me.ir.length} מתוך ${irN}</span></div>
+    ${mine.length ? `<div class="ijcs">${mine.map(mineCard).join("")}</div>` : `<p class="wok">${xi("check", 16)}אין פצועים בסגל שלך כרגע.</p>`}
+    <div class="note">סטטוס מ-Sleeper, תאריך חזרה ועדכון מ-ESPN${ESPN.injAt ? ` (עודכן ${agoTxt(new Date(ESPN.injAt).toISOString())})` : ""}.</div></section>`);
+
+  // ---- 2. free key players coming back: when to pick them up ----
+  const backs = fa.list.map(x => ({x, e: espnInjOf(x.p.id), pm: PMAP.get(x.p.id) || {}}))
+    .filter(o => o.x.inj && isOut(o.x.inj) && o.e && o.e.ret && ((o.pm.fpg || 0) >= 17 || (o.pm.min || 0) >= 28))
+    .map(o => Object.assign(o, {d: ijDays(o.e.ret)})).sort((a, b) => a.d - b.d);
+  const pickOn = d => { const t = new Date(dObj(todayUS()).getTime() + (d - 3) * DAY); return `${t.getUTCDate()}.${t.getUTCMonth() + 1}`; };
+  const LANES = [["now", "להרים עכשיו", "חוזרים תוך 3 ימים", o => o.d <= 3], ["soon", "להרים בימים הקרובים", "חוזרים בעוד 4 עד 10 ימים", o => o.d > 3 && o.d <= 10], ["later", "לעקוב", "חוזרים בעוד יותר מ-10 ימים", o => o.d > 10]];
+  const backRow = o => `<div class="ijb">${star(o.x)}<span class="pa">${hsI(o.x.p.id, 44)}${tlI(o.x.team)}</span><div class="tx"><b>${nameLink(o.x.p)}</b><small>${esc(o.x.team)} · ${(o.x.p.pos || []).join("/")} · <span class="n">${f1(o.pm.fpg || 0)}</span> למשחק</small>${o.e.short ? `<p dir="ltr" lang="en" title="${esc(o.e.short)}">${esc(o.e.short)}</p>` : ""}</div>
+    <div class="ijd"><span class="n">${ijDate(o.e.ret)}</span><small>${ijWhen(o.d)}</small>${o.d > 3 && o.d <= 10 ? `<em>להרים ב-${pickOn(o.d)}</em>` : ""}</div></div>`;
+  html.push(`<section class="blk s12" data-pt="back" aria-label="חוזרים מפציעה"><div class="bh"><h2>חוזרים מפציעה</h2><span class="meta">שחקני מפתח פנויים שבחוץ עכשיו · להרים 3 ימים לפני החזרה, כי waivers לוקח יומיים</span></div>
+    <div class="ijl" style="--n:${Math.max(1, LANES.filter(L => backs.some(L[3])).length)}">${LANES.filter(L => backs.some(L[3])).map(([k, t, s, f]) => { const rows = backs.filter(f); return `<div class="ijlane ${k}"><div class="ijlh"><b>${t}</b><span class="n">${rows.length}</span><small>${s}</small></div>${rows.slice(0, 6).map(backRow).join("") || ""}${rows.length > 6 ? `<p class="ijnone">ועוד ${rows.length - 6}</p>` : ""}</div>`; }).join("")}</div>
+    ${backs.length ? "" : `<p class="wok dim">אין כרגע שחקן מפתח פנוי שבחוץ עם תאריך חזרה.</p>`}${backs.length && !backs.some(LANES[0][3]) ? `<p class="ijnone">אין כרגע מי שחוזר בשלושת הימים הקרובים.</p>` : ""}
+    <div class="note">שחקן מפתח: 17 נקודות למשחק ומעלה או 28 דקות ומעלה בתחזית קדם העונה. תאריך החזרה של ESPN משוער.</div></section>`);
+
+  // ---- 3. openings: a 26+ minute player out, and the free teammates at his position ----
+  const opps = [];
+  Object.entries(SEA.pl || {}).forEach(([id, x]) => {
+    if (!x.team || !isOut(injOf(id))) return;
+    const p = PMAP.get(id); if (!p || (p.min || 0) < 26) return;
+    const mates = fa.list.filter(f => f.team === x.team && !isOut(f.inj) && (f.p.pos || []).some(q => (p.pos || []).includes(q))).sort((a, b) => (b.dMin - a.dMin) || (b.val - a.val)).slice(0, 2);
+    if (mates.length) opps.push({p, team: x.team, mates, e: espnInjOf(id), u: own.get(id)});
+  });
+  opps.sort((a, b) => b.p.min - a.p.min);
+  const oppRow = o => `<div class="ijo"><div class="ijo1"><span class="pa">${hsI(o.p.id, 44)}${tlI(o.team)}</span><div class="tx"><b>${esc(o.p.n)}</b><small>${Math.round(o.p.min)} דק׳ למשחק · ${o.e && o.e.ret ? `חוזר ${ijDate(o.e.ret)}` : "בחוץ"}${o.u ? ` · ${o.u === MY_USER_ID ? "שלך" : esc(tName(D, o.u))}` : ""}</small></div></div>
+    <span class="ijar">${xi("chev", 16)}</span>
+    <div class="ijo2">${o.mates.map(m => `<button type="button" class="ijm" onclick="openCard('${m.p.id}')">${hsI(m.p.id, 34)}<span><b>${esc(surname(m.p.n))}</b><small>${m.dMin >= 2 ? `<span class="up">+${Math.round(m.dMin)} דק׳</span> · ` : ""}ערך <span class="n">${f1(m.val)}</span></small></span></button>`).join("")}</div></div>`;
+  html.push(`<section class="blk s7" data-pt="opp" aria-label="הזדמנויות מפציעות"><div class="bh"><h2>הזדמנויות מפציעות</h2><span class="meta">שחקן של 26+ דקות בחוץ, והפנויים מהקבוצה ומהעמדה שלו</span></div>
+    <div class="ijos">${opps.slice(0, 6).map(oppRow).join("") || `<p class="wok dim">אין כרגע שחקן רוטציה בחוץ עם מחליף פנוי.</p>`}</div>
+    <div class="note">ליד כל פנוי: תוספת הדקות בתחזית השבוע מול קדם העונה, והערך שלו בשוק.</div></section>`);
+
+  // ---- 4. the other rosters' injured: this week's opponent first ----
+  const lg = [];
+  Object.entries(ESPN.inj || {}).forEach(([n, e]) => { const id = idByName(n), u = id && own.get(id); if (u && u !== MY_USER_ID) lg.push({id, e, u}); });
+  lg.sort((a, b) => ((b.u === oppU) - (a.u === oppU)) || ((stOf(b.e)[1] === "out") - (stOf(a.e)[1] === "out")) || (new Date(b.e.date) - new Date(a.e.date)));
+  const nOpp = lg.filter(o => o.u === oppU).length;
+  // a member's chip filters the list to his roster (Nati, 25.11.2026); the opponent's chip comes first
+  const mgrs = [...new Set(lg.map(o => o.u))].sort((a, b) => ((b === oppU) - (a === oppU)) || tName(D, a).localeCompare(tName(D, b)));
+  if (INJ.u && !mgrs.includes(INJ.u)) INJ.u = "";
+  const lgF = INJ.u ? lg.filter(o => o.u === INJ.u) : lg;
+  const mChip = (u, t, n) => `<button type="button" class="ijf${(INJ.u || "") === u ? " on" : ""}" onclick="INJ.u='${u}';INJ.more=false;renderInj()">${u ? `<i class="ijdot" style="--c:${mgrCol(D, u)}"></i>` : ""}${esc(t)} <span class="n">${n}</span></button>`;
+  const lgRow = ({id, e, u}) => { const s = stOf(e); return `<div class="ijg${u === oppU ? " op" : ""}"><span class="pa">${hsI(id, 40)}${tlI(teamOf(id))}</span><div class="tx"><b>${nameLink(pOf(id))}</b><small><i class="ijdot" style="--c:${mgrCol(D, u)}"></i>${esc(tName(D, u))}${u === oppU ? " · היריב השבוע" : ""}</small></div><span class="ijd2">${e.ret ? `<span class="n">${ijDate(e.ret)}</span>` : ""}</span><span class="chip ${s[1] === "out" ? "red" : s[1] === "ok" ? "" : "amb"}">${esc(s[0])}</span></div>`; };
+  html.push(`<section class="blk s5" data-pt="lg" aria-label="פציעות בליגה"><div class="bh"><h2>פציעות בליגה</h2><span class="meta"><span class="n">${lg.length}</span> בסגלים האחרים · ${nOpp} אצל היריב</span></div>
+    ${mgrs.length > 1 ? `<div class="ijfs">${mChip("", "הכל", lg.length)}${mgrs.map(u => mChip(u, tName(D, u), lg.filter(o => o.u === u).length)).join("")}</div>` : ""}
+    <div class="ijgs">${lgF.slice(0, INJ.more ? 60 : 8).map(lgRow).join("") || `<p class="wok dim">${ESPN.inj ? "אין פצועים בסגלים האחרים." : "טוען את דוח הפציעות"}</p>`}</div>
+    ${lgF.length > 8 ? `<div style="text-align:center;margin-top:10px"><button class="btn" onclick="INJ.more=!INJ.more;renderInj()">${INJ.more ? "פחות" : `עוד ${lgF.length - 8}`}</button></div>` : ""}</section>`);
+  out.innerHTML = html.join("");
+  applyPT(out, "inj");
 }
 
 const draftPicks2026 = [

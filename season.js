@@ -15,7 +15,7 @@ const SEEN_KEY = "sixpack-inj-seen";        // injury statuses you already saw: 
 const SEA = {d: null, err: null, at: null, loading: false, timer: null, pl: null, plAt: 0, sch: null, schAt: 0,
   fa: {pos: "ALL", healthy: true, watch: false, sort: "gain", dir: -1}};
 const WD = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
-const SEASON_TABS = ["week", "watch", "archive", "fa", "live", "news"];
+const SEASON_TABS = ["week", "watch", "archive", "fa", "inj", "live", "news"];
 const SLEEPER_URL = `https://sleeper.com/leagues/${LIVE_LEAGUE}`;
 // a free agent alert needs this many points a week over my weakest player (as daily_alert.py). It was 3 until 22.10.2026,
 // when the league's scoring was halved: 1.5 keeps the same meaning in the new scale
@@ -129,6 +129,7 @@ function paintSeason(){
   if (S.tab === "watch") renderWatch();
   if (S.tab === "week") renderWeek();
   if (S.tab === "fa") renderFA();
+  if (S.tab === "inj" && typeof renderInj === "function") renderInj();
   if (S.tab === "live" && LIVE.data) renderLive();
   if (S.tab === "news") renderNews();
 }
@@ -790,6 +791,7 @@ function rerenderSeason(){
   if (S.tab === "watch") renderWatch();
   if (S.tab === "week") renderWeek();
   if (S.tab === "fa") renderFA();
+  if (S.tab === "inj" && typeof renderInj === "function") renderInj();
   if (S.tab === "live" && LIVE.data) renderLive();
   if (S.tab === "news") renderNews();
   if (!$("alertsPop").hidden) renderAlertsPop();
